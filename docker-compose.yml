@@ -1,0 +1,52 @@
+# PostgreSQL + API. Secrets come from .env (copy .env.example; .env is git-ignored).
+#   docker compose up -d --build
+services:
+  db:
+    # Debian-based image: glibc locale gives correct case-insensitive search for Cyrillic.
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-Europe/Moscow}
+      LANG: en_US.utf8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Published on localhost only, for local tests and psql; never expose it publicly.
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      MANAGER_LOGIN: ${MANAGER_LOGIN:-}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: 3001
+      TZ: ${TZ:-Europe/Moscow}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

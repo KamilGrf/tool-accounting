@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+    --color-side: #1e3a5f;
+    --color-side-hover: #2b4c7a;
+    --color-surface: #f3f5f8;
+}
+
+body {
+    background: var(--color-surface);
+    color: #1f2933;
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* Visible keyboard focus for every interactive element (NFR-04). */
+:focus-visible {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
+}
