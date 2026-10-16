@@ -9,9 +9,10 @@ vi.mock('./supabase.js', async () => {
     const { PostgrestClient } = await import('@supabase/postgrest-js');
     const ctx = { token: null };
     globalThis.__postgrestCtx = ctx;
-    const make = () => new PostgrestClient(process.env.POSTGREST_URL || 'http://127.0.0.1:1', {
-        headers: ctx.token ? { Authorization: `Bearer ${ctx.token}` } : {},
-    });
+    const make = () =>
+        new PostgrestClient(process.env.POSTGREST_URL || 'http://127.0.0.1:1', {
+            headers: ctx.token ? { Authorization: `Bearer ${ctx.token}` } : {},
+        });
     return { supabase: { from: (table) => make().from(table), rpc: (name, args) => make().rpc(name, args) }, isConfigured: true };
 });
 
@@ -27,7 +28,9 @@ function tokenFor(sub) {
     const data = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ role: 'authenticated', aud: 'authenticated', sub, exp: Math.floor(Date.now() / 1000) + 3600 })}`;
     return `${data}.${createHmac('sha256', SECRET).update(data).digest('base64url')}`;
 }
-const as = (sub) => { globalThis.__postgrestCtx.token = sub ? tokenFor(sub) : null; };
+const as = (sub) => {
+    globalThis.__postgrestCtx.token = sub ? tokenFor(sub) : null;
+};
 
 describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
     beforeAll(() => as(null));
@@ -67,12 +70,27 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
 
     it('create returns the stored tool; a duplicate and bad data are explained', async () => {
         as(KEEPER);
-        const created = await toolsApi.create({ inv_number: 'ИНВ-0100', name: 'Рубанок', category_id: '1', price: '1250,5', manufacturer: '' });
-        expect(created).toMatchObject({ inv_number: 'ИНВ-0100', category: 'Электроинструмент', price: 1250.5, manufacturer: null, status: 'in_stock' });
-        await expect(toolsApi.create({ inv_number: 'инв-0100', name: 'Дубль', category_id: 1 }))
-            .rejects.toMatchObject({ status: 409, message: 'Инструмент с таким инвентарным номером уже есть' });
-        await expect(toolsApi.create({ inv_number: 'ИНВ-0101', name: 'Нет категории', category_id: 999 }))
-            .rejects.toMatchObject({ status: 409 });
+        const created = await toolsApi.create({
+            inv_number: 'ИНВ-0100',
+            name: 'Рубанок',
+            category_id: '1',
+            price: '1250,5',
+            manufacturer: '',
+        });
+        expect(created).toMatchObject({
+            inv_number: 'ИНВ-0100',
+            category: 'Электроинструмент',
+            price: 1250.5,
+            manufacturer: null,
+            status: 'in_stock',
+        });
+        await expect(toolsApi.create({ inv_number: 'инв-0100', name: 'Дубль', category_id: 1 })).rejects.toMatchObject({
+            status: 409,
+            message: 'Инструмент с таким инвентарным номером уже есть',
+        });
+        await expect(toolsApi.create({ inv_number: 'ИНВ-0101', name: 'Нет категории', category_id: 999 })).rejects.toMatchObject({
+            status: 409,
+        });
         const renamed = await toolsApi.update(created.id, { ...created, name: 'Рубанок 2' });
         expect(renamed.name).toBe('Рубанок 2');
     });
@@ -83,8 +101,10 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         const issue = await issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: due });
         expect(Array.isArray(issue)).toBe(false);
         expect(issue).toMatchObject({ tool_id: 2, employee_id: 1, issued_by: 'keeper@test', returned_at: null, overdue: 0 });
-        await expect(issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: due }))
-            .rejects.toMatchObject({ status: 409, message: 'Инструмент нельзя выдать: он уже выдан' });
+        await expect(issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: due })).rejects.toMatchObject({
+            status: 409,
+            message: 'Инструмент нельзя выдать: он уже выдан',
+        });
 
         const later = new Date(Date.now() + 9 * 86400000).toISOString().slice(0, 10);
         expect((await issuesApi.extend(issue.id, { due_at: later })).due_at).toBe(later);
@@ -101,7 +121,10 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         as(KEEPER);
         const [tool] = await toolsApi.list({ q: 'ИНВ-0006' });
         await expect(toolsApi.update(tool.id, { ...tool, status: 'issued' })).rejects.toMatchObject({ status: 409 });
-        await expect(toolsApi.update(tool.id, { ...tool, status: 'written_off' })).rejects.toMatchObject({ status: 403, message: 'Недостаточно прав' });
+        await expect(toolsApi.update(tool.id, { ...tool, status: 'written_off' })).rejects.toMatchObject({
+            status: 403,
+            message: 'Недостаточно прав',
+        });
         as(BOSS);
         expect((await toolsApi.update(tool.id, { ...tool, status: 'written_off' })).status).toBe('written_off');
     });
@@ -117,18 +140,22 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         expect(Object.keys(stats.counts).sort()).toEqual(['in_stock', 'issued', 'repair', 'written_off']);
         expect(stats.counts.written_off).toBe(1);
         expect(typeof stats.total_cost).toBe('number');
-        expect(stats.byCategory[0]).toEqual(expect.objectContaining({ name: expect.any(String), n: expect.any(Number), cost: expect.any(Number) }));
+        expect(stats.byCategory[0]).toEqual(
+            expect.objectContaining({ name: expect.any(String), n: expect.any(Number), cost: expect.any(Number) }),
+        );
         expect(stats.topEmployees[0]).toEqual(expect.objectContaining({ full_name: expect.any(String), n: expect.any(Number) }));
 
         const usage = await statsApi.usage();
         expect(usage.length).toBeGreaterThan(5);
-        expect(usage[0]).toEqual(expect.objectContaining({ tool_id: expect.any(Number), issues_count: expect.any(Number), days_in_use: expect.any(Number) }));
+        expect(usage[0]).toEqual(
+            expect.objectContaining({ tool_id: expect.any(Number), issues_count: expect.any(Number), days_in_use: expect.any(Number) }),
+        );
     });
 
     it('the overdue CSV contains the overdue issue', async () => {
         as(BOSS);
         const csv = await issuesApi.overdueCsv();
-        expect(csv.startsWith('﻿Инв. номер;')).toBe(true);
+        expect(csv.startsWith(String.fromCharCode(0xfeff) + 'Инв. номер;')).toBe(true);
         expect(csv).toContain('ИНВ-0001;Дрель ударная Bosch GSB 13 RE;Иванов Пётр Сергеевич');
     });
 });

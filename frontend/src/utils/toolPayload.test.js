@@ -5,10 +5,24 @@ const valid = { inv_number: 'ИНВ-1', name: 'Дрель', category_id: '1' };
 
 describe('toolRow', () => {
     it('trims text, turns empty values into null and keeps only table columns', () => {
-        const row = toolRow({ ...valid, inv_number: '  ИНВ-1 ', manufacturer: '  ', note: undefined, id: 9, category: 'Электро', status: 'issued' });
+        const row = toolRow({
+            ...valid,
+            inv_number: '  ИНВ-1 ',
+            manufacturer: '  ',
+            note: undefined,
+            id: 9,
+            category: 'Электро',
+            status: 'issued',
+        });
         expect(row).toEqual({
-            inv_number: 'ИНВ-1', name: 'Дрель', category_id: 1, manufacturer: null,
-            purchase_date: null, price: 0, location: null, note: null,
+            inv_number: 'ИНВ-1',
+            name: 'Дрель',
+            category_id: 1,
+            manufacturer: null,
+            purchase_date: null,
+            price: 0,
+            location: null,
+            note: null,
         });
     });
 

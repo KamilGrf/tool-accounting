@@ -9,14 +9,21 @@ const h = vi.hoisted(() => {
     const chain = (table) => {
         const rec = { table, ops: [] };
         state.ops.push(rec);
-        const proxy = new Proxy({}, {
-            get(_, prop) {
-                if (prop === 'then') {
-                    return (resolve, reject) => Promise.resolve(state.tables[table]?.(rec) ?? { data: null, error: null }).then(resolve, reject);
-                }
-                return (...args) => { rec.ops.push([prop, ...args]); return proxy; };
+        const proxy = new Proxy(
+            {},
+            {
+                get(_, prop) {
+                    if (prop === 'then') {
+                        return (resolve, reject) =>
+                            Promise.resolve(state.tables[table]?.(rec) ?? { data: null, error: null }).then(resolve, reject);
+                    }
+                    return (...args) => {
+                        rec.ops.push([prop, ...args]);
+                        return proxy;
+                    };
+                },
             },
-        });
+        );
         return proxy;
     };
     const client = {
@@ -37,7 +44,15 @@ vi.mock('./supabase.js', () => ({ supabase: h.client, isConfigured: true }));
 const ok = (data) => ({ data, error: null });
 const fail = (code, message) => ({ data: null, error: { code, message } });
 const opsOf = (table) => h.state.ops.filter((r) => r.table === table).flatMap((r) => r.ops);
-const toolRowForm = { inv_number: ' ИНВ-0100 ', name: 'Рубанок', category_id: '2', manufacturer: '', price: '99,5', location: ' ', purchase_date: '' };
+const toolRowForm = {
+    inv_number: ' ИНВ-0100 ',
+    name: 'Рубанок',
+    category_id: '2',
+    manufacturer: '',
+    price: '99,5',
+    location: ' ',
+    purchase_date: '',
+};
 
 beforeEach(() => {
     Object.assign(h.state, { rpc: {}, tables: {}, auth: {}, ops: [] });
@@ -69,20 +84,35 @@ describe('tools', () => {
         expect(await toolsApi.create({ ...toolRowForm, id: 5, category: 'не колонка' })).toEqual({ id: 7, name: 'Рубанок' });
         const insert = opsOf('tools').find(([op]) => op === 'insert');
         expect(insert[1]).toEqual({
-            inv_number: 'ИНВ-0100', name: 'Рубанок', category_id: 2, manufacturer: null,
-            purchase_date: null, price: 99.5, location: null, note: null,
+            inv_number: 'ИНВ-0100',
+            name: 'Рубанок',
+            category_id: 2,
+            manufacturer: null,
+            purchase_date: null,
+            price: 99.5,
+            location: null,
+            note: null,
         });
     });
 
     it('create rejects an invalid price before any request is made', async () => {
-        await expect(toolsApi.create({ ...toolRowForm, price: 'abc' })).rejects.toMatchObject({ status: 400, message: 'Цена должна быть неотрицательным числом' });
-        await expect(toolsApi.create({ ...toolRowForm, name: '  ' })).rejects.toMatchObject({ status: 400, message: 'Поле «Наименование» обязательно для заполнения' });
+        await expect(toolsApi.create({ ...toolRowForm, price: 'abc' })).rejects.toMatchObject({
+            status: 400,
+            message: 'Цена должна быть неотрицательным числом',
+        });
+        await expect(toolsApi.create({ ...toolRowForm, name: '  ' })).rejects.toMatchObject({
+            status: 400,
+            message: 'Поле «Наименование» обязательно для заполнения',
+        });
         expect(h.client.from).not.toHaveBeenCalled();
     });
 
     it('create explains a duplicate inventory number', async () => {
         h.state.tables.tools = () => fail('23505', 'duplicate key value violates unique constraint "ux_tools_inv_number"');
-        await expect(toolsApi.create(toolRowForm)).rejects.toMatchObject({ status: 409, message: 'Инструмент с таким инвентарным номером уже есть' });
+        await expect(toolsApi.create(toolRowForm)).rejects.toMatchObject({
+            status: 409,
+            message: 'Инструмент с таким инвентарным номером уже есть',
+        });
     });
 
     it('update sends the status only when it is given and reports a missing tool', async () => {
@@ -99,7 +129,10 @@ describe('tools', () => {
 
     it('update shows the database message when a storekeeper tries to write a tool off', async () => {
         h.state.tables.tools = () => fail('P0403', 'Недостаточно прав');
-        await expect(toolsApi.update(3, { ...toolRowForm, status: 'written_off' })).rejects.toMatchObject({ status: 403, message: 'Недостаточно прав' });
+        await expect(toolsApi.update(3, { ...toolRowForm, status: 'written_off' })).rejects.toMatchObject({
+            status: 403,
+            message: 'Недостаточно прав',
+        });
     });
 });
 
@@ -117,9 +150,19 @@ describe('issues', () => {
         h.state.rpc.return_tool = () => ok({ id: 11 });
         h.state.rpc.extend_issue = () => ok({ id: 11 });
         await issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: '2026-12-01' });
-        expect(h.client.rpc).toHaveBeenLastCalledWith('issue_tool', { p_tool_id: 2, p_employee_id: 1, p_due_at: '2026-12-01', p_issued_at: null });
+        expect(h.client.rpc).toHaveBeenLastCalledWith('issue_tool', {
+            p_tool_id: 2,
+            p_employee_id: 1,
+            p_due_at: '2026-12-01',
+            p_issued_at: null,
+        });
         await issuesApi.returnTool(11, { condition_note: 'Царапина', to_repair: true });
-        expect(h.client.rpc).toHaveBeenLastCalledWith('return_tool', { p_issue_id: 11, p_condition_note: 'Царапина', p_to_repair: true, p_returned_at: null });
+        expect(h.client.rpc).toHaveBeenLastCalledWith('return_tool', {
+            p_issue_id: 11,
+            p_condition_note: 'Царапина',
+            p_to_repair: true,
+            p_returned_at: null,
+        });
         await issuesApi.extend(11, { due_at: '2026-12-10' });
         expect(h.client.rpc).toHaveBeenLastCalledWith('extend_issue', { p_issue_id: 11, p_due_at: '2026-12-10' });
     });
@@ -132,12 +175,20 @@ describe('issues', () => {
     });
 
     it('overdueCsv builds the file from the overdue issues', async () => {
-        h.state.rpc.list_issues = () => ok([{
-            inv_number: 'ИНВ-0001', tool_name: 'Дрель', employee_name: 'Иванов', department: 'Цех', issued_at: '2020-01-01', due_at: '2020-01-05',
-        }]);
+        h.state.rpc.list_issues = () =>
+            ok([
+                {
+                    inv_number: 'ИНВ-0001',
+                    tool_name: 'Дрель',
+                    employee_name: 'Иванов',
+                    department: 'Цех',
+                    issued_at: '2020-01-01',
+                    due_at: '2020-01-05',
+                },
+            ]);
         const csv = await issuesApi.overdueCsv();
         expect(h.client.rpc).toHaveBeenCalledWith('list_issues', expect.objectContaining({ p_overdue: true }));
-        expect(csv.startsWith('﻿Инв. номер;')).toBe(true);
+        expect(csv.startsWith(String.fromCharCode(0xfeff) + 'Инв. номер;')).toBe(true);
         expect(csv).toContain('ИНВ-0001;Дрель;Иванов;Цех;2020-01-01;2020-01-05;');
     });
 });
@@ -180,13 +231,19 @@ describe('authentication', () => {
 
     it('login: wrong credentials -> 401 with a Russian message', async () => {
         h.state.auth.signIn = { data: {}, error: { code: 'invalid_credentials', status: 400, message: 'Invalid login credentials' } };
-        await expect(authApi.login({ email: 'a@b.ru', password: 'x' })).rejects.toMatchObject({ status: 401, message: 'Неверный email или пароль' });
+        await expect(authApi.login({ email: 'a@b.ru', password: 'x' })).rejects.toMatchObject({
+            status: 401,
+            message: 'Неверный email или пароль',
+        });
     });
 
     it('login: success loads the profile', async () => {
         h.state.auth.signIn = { data: { user: { id: 'u1' } }, error: null };
         h.state.tables.profiles = () => ok(profile);
-        expect(await authApi.login({ email: 'ivan@test.ru', password: 'secret-pass' })).toMatchObject({ login: 'ivan@test.ru', role: 'manager' });
+        expect(await authApi.login({ email: 'ivan@test.ru', password: 'secret-pass' })).toMatchObject({
+            login: 'ivan@test.ru',
+            role: 'manager',
+        });
         expect(h.client.auth.signInWithPassword).toHaveBeenCalledWith({ email: 'ivan@test.ru', password: 'secret-pass' });
     });
 

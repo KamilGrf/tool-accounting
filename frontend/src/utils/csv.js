@@ -11,12 +11,21 @@ export function csvCell(value) {
 
 const HEADER = ['Инв. номер', 'Инструмент', 'Сотрудник', 'Подразделение', 'Выдан', 'Срок возврата', 'Дней просрочки'];
 
+// Excel needs a byte order mark to read the file as UTF-8 (kept out of the source as an invisible character).
+const BOM = String.fromCharCode(0xfeff);
+
 /** @param {object[]} issues rows of v_issues (overdue ones) */
 export function buildOverdueCsv(issues, today = todayIso()) {
     const rows = issues.map((i) => [
-        i.inv_number, i.tool_name, i.employee_name, i.department, i.issued_at, i.due_at, daysOverdue(i.due_at, today),
+        i.inv_number,
+        i.tool_name,
+        i.employee_name,
+        i.department,
+        i.issued_at,
+        i.due_at,
+        daysOverdue(i.due_at, today),
     ]);
-    return `﻿${[HEADER, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n')}\r\n`;
+    return `${BOM}${[HEADER, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n')}\r\n`;
 }
 
 /** Offer a text as a file download. */

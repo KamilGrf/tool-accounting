@@ -9,7 +9,12 @@ import { api, resetApi } from './test/mockApi.js';
 vi.mock('./api/index.js', async () => (await import('./test/mockApi.js')).api);
 beforeEach(resetApi);
 
-const renderApp = (path = '/tools') => render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
+const renderApp = (path = '/tools') =>
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <App />
+        </MemoryRouter>,
+    );
 const signedInAs = (role) => api.authApi.me.mockResolvedValue({ id: 'u1', login: 'ivan@test.ru', role });
 
 describe('authentication and roles', () => {
@@ -83,7 +88,9 @@ describe('authentication and roles', () => {
         signedInAs('manager');
         renderApp();
         await screen.findByTestId('whoami');
-        act(() => { window.dispatchEvent(new Event(AUTH_EXPIRED)); });
+        act(() => {
+            window.dispatchEvent(new Event(AUTH_EXPIRED));
+        });
         expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument();
         await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Сессия истекла. Войдите снова'));
     });
@@ -101,7 +108,9 @@ describe('authentication and roles', () => {
     it('logout calls the API and shows the login screen without an "expired" notice', async () => {
         signedInAs('manager');
         // Supabase fires its "signed out" event for our own sign-out too.
-        api.authApi.logout.mockImplementation(async () => { api.authApi.onSessionEnd.mock.calls[0][0](); });
+        api.authApi.logout.mockImplementation(async () => {
+            api.authApi.onSessionEnd.mock.calls[0][0]();
+        });
         renderApp();
         await userEvent.click(await screen.findByRole('button', { name: 'Выйти' }));
         expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument();

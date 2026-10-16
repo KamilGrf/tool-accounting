@@ -21,10 +21,23 @@ export class NetworkError extends Error {
 export const AUTH_EXPIRED = 'auth:expired';
 
 const STATUS_BY_CODE = {
-    P0400: 400, P0401: 401, P0403: 403, P0404: 404, P0409: 409,
-    42501: 403, 23505: 409, 23503: 409, 23514: 400,
-    22001: 400, 22003: 400, 22007: 400, 22008: 400, '22P02': 400,
-    PGRST116: 404, PGRST301: 401, PGRST303: 401,
+    P0400: 400,
+    P0401: 401,
+    P0403: 403,
+    P0404: 404,
+    P0409: 409,
+    42501: 403,
+    23505: 409,
+    23503: 409,
+    23514: 400,
+    22001: 400,
+    22003: 400,
+    22007: 400,
+    22008: 400,
+    '22P02': 400,
+    PGRST116: 404,
+    PGRST301: 401,
+    PGRST303: 401,
 };
 
 // Which unique constraint was violated -> what to tell the user.
@@ -71,8 +84,14 @@ const AUTH_ERRORS = {
     over_request_rate_limit: [429, 'Слишком много попыток. Повторите позже'],
     over_email_send_rate_limit: [429, 'Слишком много писем за короткое время. Повторите позже'],
     // The built-in Supabase mailer only writes to a few addresses and can fail otherwise.
-    email_address_not_authorized: [403, 'Supabase не может отправить письмо на этот адрес. Отключите подтверждение email в настройках Auth или подключите свою почту (SMTP)'],
-    unexpected_failure: [500, 'Не удалось отправить письмо подтверждения. Отключите подтверждение email в настройках Auth или подключите свою почту (SMTP)'],
+    email_address_not_authorized: [
+        403,
+        'Supabase не может отправить письмо на этот адрес. Отключите подтверждение email в настройках Auth или подключите свою почту (SMTP)',
+    ],
+    unexpected_failure: [
+        500,
+        'Не удалось отправить письмо подтверждения. Отключите подтверждение email в настройках Auth или подключите свою почту (SMTP)',
+    ],
 };
 
 /** Convert a Supabase Auth error. */

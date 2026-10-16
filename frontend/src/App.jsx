@@ -13,15 +13,19 @@ function MissingConfig() {
         <div role="alert" className="m-4 rounded border border-red-300 bg-red-50 p-4 text-red-800">
             <h1 className="font-semibold">Приложение не настроено</h1>
             <p className="mt-1 text-sm">
-                Не заданы переменные <code>VITE_SUPABASE_URL</code> и <code>VITE_SUPABASE_ANON_KEY</code>.
-                Укажите их (файл <code>.env</code> локально или настройки проекта на хостинге) и пересоберите приложение.
+                Не заданы переменные <code>VITE_SUPABASE_URL</code> и <code>VITE_SUPABASE_ANON_KEY</code>. Укажите их (файл{' '}
+                <code>.env</code> локально или настройки проекта на хостинге) и пересоберите приложение.
             </p>
         </div>
     );
 }
 
 function Forbidden() {
-    return <p role="alert" className="p-4">Недостаточно прав для этого раздела</p>;
+    return (
+        <p role="alert" className="p-4">
+            Недостаточно прав для этого раздела
+        </p>
+    );
 }
 
 function AppRoutes() {

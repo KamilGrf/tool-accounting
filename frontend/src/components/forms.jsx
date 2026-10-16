@@ -41,7 +41,11 @@ export function ToolForm({ categories, onSaved, onClose }) {
                     {(p) => (
                         <select {...p} className={inputClass} value={values.category_id} onChange={set('category_id')}>
                             <option value="">Выберите категорию</option>
-                            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {categories.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
                         </select>
                     )}
                 </Field>
@@ -86,17 +90,39 @@ export function IssueForm({ tool, onSaved, onClose }) {
             <form onSubmit={onSubmit} noValidate>
                 <Field label="Сотрудник *" error={errors.employee}>
                     {(p) => (
-                        <select {...p} className={inputClass} value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={employees.loading && !employees.data}>
+                        <select
+                            {...p}
+                            className={inputClass}
+                            value={employeeId}
+                            onChange={(e) => setEmployeeId(e.target.value)}
+                            disabled={employees.loading && !employees.data}
+                        >
                             <option value="">{employees.loading ? 'Загрузка…' : 'Выберите сотрудника'}</option>
                             {(employees.data || []).map((e) => (
-                                <option key={e.id} value={e.id}>{e.full_name}{e.department ? ` — ${e.department}` : ''}</option>
+                                <option key={e.id} value={e.id}>
+                                    {e.full_name}
+                                    {e.department ? ` — ${e.department}` : ''}
+                                </option>
                             ))}
                         </select>
                     )}
                 </Field>
-                {employees.error && <p role="alert" className="mb-3 text-sm text-red-700">Не удалось загрузить сотрудников. Закройте форму и повторите</p>}
+                {employees.error && (
+                    <p role="alert" className="mb-3 text-sm text-red-700">
+                        Не удалось загрузить сотрудников. Закройте форму и повторите
+                    </p>
+                )}
                 <Field label="Вернуть до *" error={errors.due}>
-                    {(p) => <input {...p} type="date" min={todayIso()} className={inputClass} value={dueAt} onChange={(e) => setDueAt(e.target.value)} />}
+                    {(p) => (
+                        <input
+                            {...p}
+                            type="date"
+                            min={todayIso()}
+                            className={inputClass}
+                            value={dueAt}
+                            onChange={(e) => setDueAt(e.target.value)}
+                        />
+                    )}
                 </Field>
                 <FormFooter pending={submit.pending} error={submit.error} onCancel={onClose} submitLabel="Выдать" />
             </form>
@@ -119,7 +145,16 @@ export function ReturnForm({ issue, onSaved, onClose }) {
         <Modal title={`Принять возврат: ${issue.tool_name}`} onClose={onClose}>
             <form onSubmit={onSubmit} noValidate>
                 <Field label="Состояние при возврате">
-                    {(p) => <textarea {...p} rows={3} maxLength={300} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} />}
+                    {(p) => (
+                        <textarea
+                            {...p}
+                            rows={3}
+                            maxLength={300}
+                            className={inputClass}
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                        />
+                    )}
                 </Field>
                 <label className="mb-3 flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={toRepair} onChange={(e) => setToRepair(e.target.checked)} />
@@ -171,7 +206,9 @@ export function WriteOffForm({ tool, onSaved, onClose }) {
     return (
         <Modal title="Списать инструмент" onClose={onClose}>
             <form onSubmit={onSubmit}>
-                <p className="mb-3 text-sm">Списать «{tool.name}» ({tool.inv_number})? Он исчезнет из отчётов и не сможет быть выдан.</p>
+                <p className="mb-3 text-sm">
+                    Списать «{tool.name}» ({tool.inv_number})? Он исчезнет из отчётов и не сможет быть выдан.
+                </p>
                 <FormFooter pending={submit.pending} error={submit.error} onCancel={onClose} submitLabel="Списать" />
             </form>
         </Modal>

@@ -8,7 +8,11 @@ import { ExtendForm, IssueForm, ReturnForm, ToolForm, WriteOffForm } from '../co
 import { Button, EmptyState, ErrorBanner, Spinner, StatusBadge, TableCard } from '../components/ui.jsx';
 
 const STATUS_OPTIONS = [
-    ['', 'Все статусы'], ['in_stock', 'На складе'], ['issued', 'Выдан'], ['repair', 'В ремонте'], ['written_off', 'Списан'],
+    ['', 'Все статусы'],
+    ['in_stock', 'На складе'],
+    ['issued', 'Выдан'],
+    ['repair', 'В ремонте'],
+    ['written_off', 'Списан'],
 ];
 
 export default function ToolsPage() {
@@ -25,7 +29,11 @@ export default function ToolsPage() {
     const selected = (tools.data || []).find((t) => t.id === selectedId) || null;
     const hasFilters = Boolean(q || status || category);
 
-    const resetFilters = () => { setQ(''); setStatus(''); setCategory(''); };
+    const resetFilters = () => {
+        setQ('');
+        setStatus('');
+        setCategory('');
+    };
     const afterChange = () => tools.reload();
 
     // Below the xl breakpoint the details panel sits under the table, out of sight:
@@ -41,18 +49,41 @@ export default function ToolsPage() {
             <h2 className="mb-3 text-lg font-semibold">Инструменты</h2>
             <div className="mb-3 flex flex-wrap gap-2">
                 <input
-                    type="search" aria-label="Поиск" placeholder="Название, номер, производитель"
-                    value={q} onChange={(e) => setQ(e.target.value)}
+                    type="search"
+                    aria-label="Поиск"
+                    placeholder="Название, номер, производитель"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
                     className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-1.5 text-sm sm:max-w-xs"
                 />
-                <select aria-label="Категория" value={category} onChange={(e) => setCategory(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm">
+                <select
+                    aria-label="Категория"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                >
                     <option value="">Все категории</option>
-                    {(categories.data || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {(categories.data || []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.name}
+                        </option>
+                    ))}
                 </select>
-                <select aria-label="Статус" value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm">
-                    {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                <select
+                    aria-label="Статус"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                >
+                    {STATUS_OPTIONS.map(([v, l]) => (
+                        <option key={v} value={v}>
+                            {l}
+                        </option>
+                    ))}
                 </select>
-                <Button onClick={() => setModal('add')} disabled={!categories.data}>Добавить инструмент</Button>
+                <Button onClick={() => setModal('add')} disabled={!categories.data}>
+                    Добавить инструмент
+                </Button>
             </div>
 
             <ErrorBanner error={tools.error} onRetry={tools.reload} />
@@ -63,8 +94,17 @@ export default function ToolsPage() {
                     {tools.data && tools.data.length === 0 && (
                         <EmptyState>
                             {hasFilters ? (
-                                <>Ничего не найдено <div className="mt-2"><Button variant="secondary" onClick={resetFilters}>Сбросить фильтры</Button></div></>
-                            ) : 'Инструментов пока нет'}
+                                <>
+                                    Ничего не найдено{' '}
+                                    <div className="mt-2">
+                                        <Button variant="secondary" onClick={resetFilters}>
+                                            Сбросить фильтры
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                'Инструментов пока нет'
+                            )}
                         </EmptyState>
                     )}
                     {tools.data && tools.data.length > 0 && (
@@ -91,7 +131,9 @@ export default function ToolsPage() {
                                             <td className="whitespace-nowrap px-2.5 py-2">{t.inv_number}</td>
                                             <td className="px-2.5 py-2">{t.name}</td>
                                             <td className="hidden px-2.5 py-2 md:table-cell">{t.category}</td>
-                                            <td className="px-2.5 py-2"><StatusBadge status={t.status} /></td>
+                                            <td className="px-2.5 py-2">
+                                                <StatusBadge status={t.status} />
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -100,9 +142,21 @@ export default function ToolsPage() {
                     )}
                 </section>
 
-                <aside ref={detailRef} aria-label="Карточка инструмента" className="scroll-mt-3 rounded border border-slate-300 bg-white p-4">
+                <aside
+                    ref={detailRef}
+                    aria-label="Карточка инструмента"
+                    className="scroll-mt-3 rounded border border-slate-300 bg-white p-4"
+                >
                     {selected ? (
-                        <ToolDetail key={selected.id} tool={selected} version={tools.data} onIssue={() => setModal('issue')} onWriteOff={() => setModal('writeoff')} onReturn={(issue) => setModal({ returnIssue: issue })} onExtend={(issue) => setModal({ extendIssue: issue })} />
+                        <ToolDetail
+                            key={selected.id}
+                            tool={selected}
+                            version={tools.data}
+                            onIssue={() => setModal('issue')}
+                            onWriteOff={() => setModal('writeoff')}
+                            onReturn={(issue) => setModal({ returnIssue: issue })}
+                            onExtend={(issue) => setModal({ extendIssue: issue })}
+                        />
                     ) : (
                         <p className="text-sm text-slate-500">Выберите инструмент в списке</p>
                     )}
@@ -127,14 +181,26 @@ function ToolDetail({ tool, onIssue, onReturn, onExtend, onWriteOff, version }) 
     return (
         <div>
             <h3 className="font-semibold">{tool.name}</h3>
-            <div className="mt-1"><StatusBadge status={tool.status} /></div>
+            <div className="mt-1">
+                <StatusBadge status={tool.status} />
+            </div>
             <dl className="my-3 grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 text-sm">
-                <dt className="text-slate-500">Инв. номер</dt><dd>{tool.inv_number}</dd>
-                <dt className="text-slate-500">Категория</dt><dd>{tool.category}</dd>
-                <dt className="text-slate-500">Производитель</dt><dd>{tool.manufacturer || '—'}</dd>
-                <dt className="text-slate-500">Цена</dt><dd>{formatMoney(tool.price)}</dd>
-                <dt className="text-slate-500">Хранение</dt><dd>{tool.location || '—'}</dd>
-                {tool.note && <><dt className="text-slate-500">Примечание</dt><dd>{tool.note}</dd></>}
+                <dt className="text-slate-500">Инв. номер</dt>
+                <dd>{tool.inv_number}</dd>
+                <dt className="text-slate-500">Категория</dt>
+                <dd>{tool.category}</dd>
+                <dt className="text-slate-500">Производитель</dt>
+                <dd>{tool.manufacturer || '—'}</dd>
+                <dt className="text-slate-500">Цена</dt>
+                <dd>{formatMoney(tool.price)}</dd>
+                <dt className="text-slate-500">Хранение</dt>
+                <dd>{tool.location || '—'}</dd>
+                {tool.note && (
+                    <>
+                        <dt className="text-slate-500">Примечание</dt>
+                        <dd>{tool.note}</dd>
+                    </>
+                )}
             </dl>
 
             <h4 className="mb-1 mt-4 text-xs font-semibold uppercase text-slate-500">История выдач</h4>
@@ -159,8 +225,16 @@ function ToolDetail({ tool, onIssue, onReturn, onExtend, onWriteOff, version }) 
             <div className="mt-4 flex flex-wrap gap-2">
                 {tool.status === 'in_stock' && <Button onClick={onIssue}>Выдать</Button>}
                 {tool.status === 'issued' && open && <Button onClick={() => onReturn(open)}>Принять возврат</Button>}
-                {tool.status === 'issued' && open && <Button variant="secondary" onClick={() => onExtend(open)}>Продлить срок</Button>}
-                {user.role === 'manager' && ['in_stock', 'repair'].includes(tool.status) && <Button variant="secondary" onClick={onWriteOff}>Списать</Button>}
+                {tool.status === 'issued' && open && (
+                    <Button variant="secondary" onClick={() => onExtend(open)}>
+                        Продлить срок
+                    </Button>
+                )}
+                {user.role === 'manager' && ['in_stock', 'repair'].includes(tool.status) && (
+                    <Button variant="secondary" onClick={onWriteOff}>
+                        Списать
+                    </Button>
+                )}
             </div>
         </div>
     );

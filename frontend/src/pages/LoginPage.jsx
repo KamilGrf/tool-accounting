@@ -33,25 +33,53 @@ export default function LoginPage() {
             <form onSubmit={onSubmit} noValidate className="w-full max-w-sm rounded-lg bg-white p-5 shadow">
                 <h1 className="mb-1 text-lg font-semibold">АС «Учёт инструментов»</h1>
                 <p className="mb-4 text-sm text-slate-500">{mode === 'login' ? 'Вход в систему' : 'Регистрация кладовщика'}</p>
-                {notice && <p role="status" className="mb-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">{notice}</p>}
+                {notice && (
+                    <p role="status" className="mb-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                        {notice}
+                    </p>
+                )}
 
                 <Field label="Email" error={errors.email}>
-                    {(p) => <input {...p} type="email" autoComplete="username" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />}
+                    {(p) => (
+                        <input
+                            {...p}
+                            type="email"
+                            autoComplete="username"
+                            className={inputClass}
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    )}
                 </Field>
                 <Field label="Пароль" error={errors.password}>
                     {(p) => (
-                        <input {...p} type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                            className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
+                        <input
+                            {...p}
+                            type="password"
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            className={inputClass}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
                     )}
                 </Field>
 
-                {submit.error && <p role="alert" className="mb-3 text-sm text-red-700">{submit.error}</p>}
+                {submit.error && (
+                    <p role="alert" className="mb-3 text-sm text-red-700">
+                        {submit.error}
+                    </p>
+                )}
                 <Button type="submit" className="w-full" disabled={submit.pending}>
                     {submit.pending ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
                 </Button>
                 <button
-                    type="button" className="mt-3 w-full text-sm text-blue-700 underline"
-                    onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrors({}); submit.setError(''); }}
+                    type="button"
+                    className="mt-3 w-full text-sm text-blue-700 underline"
+                    onClick={() => {
+                        setMode(mode === 'login' ? 'register' : 'login');
+                        setErrors({});
+                        submit.setError('');
+                    }}
                 >
                     {mode === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
                 </button>

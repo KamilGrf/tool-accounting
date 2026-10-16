@@ -22,7 +22,12 @@ export default function IssuesPage() {
             <h2 className="mb-3 text-lg font-semibold">Выдача и возврат</h2>
             <div role="group" aria-label="Фильтр выдач" className="mb-3 flex gap-2">
                 {FILTERS.map((f) => (
-                    <Button key={f.key} variant={filter === f.key ? 'primary' : 'secondary'} aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>
+                    <Button
+                        key={f.key}
+                        variant={filter === f.key ? 'primary' : 'secondary'}
+                        aria-pressed={filter === f.key}
+                        onClick={() => setFilter(f.key)}
+                    >
                         {f.label}
                     </Button>
                 ))}
@@ -42,7 +47,9 @@ export default function IssuesPage() {
                                 <th className="px-2.5 py-2">Сотрудник</th>
                                 <th className="hidden px-2.5 py-2 sm:table-cell">Выдан</th>
                                 <th className="px-2.5 py-2">Срок</th>
-                                <th className="px-2.5 py-2"><span className="sr-only">Действия</span></th>
+                                <th className="px-2.5 py-2">
+                                    <span className="sr-only">Действия</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -50,7 +57,9 @@ export default function IssuesPage() {
                                 const late = !i.returned_at && i.overdue;
                                 return (
                                     <tr key={i.id} className="border-t border-slate-200">
-                                        <td className="px-2.5 py-2">{i.inv_number} — {i.tool_name}</td>
+                                        <td className="px-2.5 py-2">
+                                            {i.inv_number} — {i.tool_name}
+                                        </td>
                                         <td className="px-2.5 py-2">{i.employee_name}</td>
                                         <td className="hidden px-2.5 py-2 sm:table-cell">{formatDate(i.issued_at)}</td>
                                         <td className={`px-2.5 py-2 ${late ? 'font-semibold text-red-700' : ''}`}>
@@ -58,7 +67,11 @@ export default function IssuesPage() {
                                             {late && <> (−{daysOverdue(i.due_at)} дн.)</>}
                                         </td>
                                         <td className="px-2.5 py-2 text-right">
-                                            {!i.returned_at && <Button variant="secondary" onClick={() => setReturning(i)}>Принять</Button>}
+                                            {!i.returned_at && (
+                                                <Button variant="secondary" onClick={() => setReturning(i)}>
+                                                    Принять
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 );

@@ -23,11 +23,22 @@ describe('csvCell', () => {
 });
 
 describe('buildOverdueCsv', () => {
-    const issue = { inv_number: 'ИНВ-0001', tool_name: '=Дрель', employee_name: 'Иванов', department: null, issued_at: '2026-01-01', due_at: '2026-01-05' };
+    const issue = {
+        inv_number: 'ИНВ-0001',
+        tool_name: '=Дрель',
+        employee_name: 'Иванов',
+        department: null,
+        issued_at: '2026-01-01',
+        due_at: '2026-01-05',
+    };
 
     it('starts with a BOM and the header, uses ";" and CRLF', () => {
         const csv = buildOverdueCsv([issue], '2026-01-10');
-        expect(csv.startsWith('﻿Инв. номер;Инструмент;Сотрудник;Подразделение;Выдан;Срок возврата;Дней просрочки\r\n')).toBe(true);
+        expect(
+            csv.startsWith(
+                String.fromCharCode(0xfeff) + 'Инв. номер;Инструмент;Сотрудник;Подразделение;Выдан;Срок возврата;Дней просрочки\r\n',
+            ),
+        ).toBe(true);
         expect(csv.endsWith('\r\n')).toBe(true);
     });
 

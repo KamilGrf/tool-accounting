@@ -35,7 +35,9 @@ export default function ReportPage() {
         <div>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Отчёт по инструментам</h2>
-                <Button variant="secondary" onClick={exportCsv}>Экспорт CSV</Button>
+                <Button variant="secondary" onClick={exportCsv}>
+                    Экспорт CSV
+                </Button>
             </div>
             <ErrorBanner error={exportError} onRetry={exportCsv} />
             <ErrorBanner error={report.error} onRetry={report.reload} />
@@ -63,7 +65,13 @@ function ReportBody({ stats, overdue, usage }) {
                     <h3 className="mb-1 font-semibold">По категориям</h3>
                     <TableCard>
                         <table className="w-full text-sm">
-                            <thead className="bg-slate-200 text-left"><tr><th className="px-2.5 py-2">Категория</th><th className="px-2.5 py-2 text-right">Шт.</th><th className="px-2.5 py-2 text-right">Стоимость</th></tr></thead>
+                            <thead className="bg-slate-200 text-left">
+                                <tr>
+                                    <th className="px-2.5 py-2">Категория</th>
+                                    <th className="px-2.5 py-2 text-right">Шт.</th>
+                                    <th className="px-2.5 py-2 text-right">Стоимость</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 {stats.byCategory.map((c) => (
                                     <tr key={c.name} className="border-t border-slate-200">
@@ -83,10 +91,18 @@ function ReportBody({ stats, overdue, usage }) {
                     ) : (
                         <TableCard>
                             <table className="w-full text-sm">
-                                <thead className="bg-slate-200 text-left"><tr><th className="px-2.5 py-2">Сотрудник</th><th className="px-2.5 py-2 text-right">Шт.</th></tr></thead>
+                                <thead className="bg-slate-200 text-left">
+                                    <tr>
+                                        <th className="px-2.5 py-2">Сотрудник</th>
+                                        <th className="px-2.5 py-2 text-right">Шт.</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     {stats.topEmployees.map((e) => (
-                                        <tr key={e.full_name} className="border-t border-slate-200"><td className="px-2.5 py-2">{e.full_name}</td><td className="px-2.5 py-2 text-right">{e.n}</td></tr>
+                                        <tr key={e.full_name} className="border-t border-slate-200">
+                                            <td className="px-2.5 py-2">{e.full_name}</td>
+                                            <td className="px-2.5 py-2 text-right">{e.n}</td>
+                                        </tr>
                                     ))}
                                 </tbody>
                             </table>
@@ -99,11 +115,20 @@ function ReportBody({ stats, overdue, usage }) {
                 <h3 className="mb-1 font-semibold">Использование инструментов</h3>
                 <TableCard>
                     <table className="w-full text-sm">
-                        <thead className="bg-slate-200 text-left"><tr><th className="px-2.5 py-2">Инструмент</th><th className="px-2.5 py-2 text-right">Выдач</th><th className="px-2.5 py-2 text-right">Дней на руках</th><th className="hidden px-2.5 py-2 sm:table-cell">Последняя выдача</th></tr></thead>
+                        <thead className="bg-slate-200 text-left">
+                            <tr>
+                                <th className="px-2.5 py-2">Инструмент</th>
+                                <th className="px-2.5 py-2 text-right">Выдач</th>
+                                <th className="px-2.5 py-2 text-right">Дней на руках</th>
+                                <th className="hidden px-2.5 py-2 sm:table-cell">Последняя выдача</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {usage.map((u) => (
                                 <tr key={u.tool_id} className="border-t border-slate-200">
-                                    <td className="px-2.5 py-2">{u.inv_number} — {u.tool_name}</td>
+                                    <td className="px-2.5 py-2">
+                                        {u.inv_number} — {u.tool_name}
+                                    </td>
                                     <td className="px-2.5 py-2 text-right">{u.issues_count}</td>
                                     <td className="px-2.5 py-2 text-right">{u.days_in_use}</td>
                                     <td className="hidden px-2.5 py-2 sm:table-cell">{formatDate(u.last_issued_at)}</td>
@@ -121,11 +146,20 @@ function ReportBody({ stats, overdue, usage }) {
                 ) : (
                     <TableCard>
                         <table className="w-full text-sm">
-                            <thead className="bg-slate-200 text-left"><tr><th className="px-2.5 py-2">Инструмент</th><th className="px-2.5 py-2">Сотрудник</th><th className="px-2.5 py-2">Вернуть до</th><th className="px-2.5 py-2 text-right">Дней</th></tr></thead>
+                            <thead className="bg-slate-200 text-left">
+                                <tr>
+                                    <th className="px-2.5 py-2">Инструмент</th>
+                                    <th className="px-2.5 py-2">Сотрудник</th>
+                                    <th className="px-2.5 py-2">Вернуть до</th>
+                                    <th className="px-2.5 py-2 text-right">Дней</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 {overdue.map((i) => (
                                     <tr key={i.id} className="border-t border-slate-200 text-red-800">
-                                        <td className="px-2.5 py-2">{i.inv_number} — {i.tool_name}</td>
+                                        <td className="px-2.5 py-2">
+                                            {i.inv_number} — {i.tool_name}
+                                        </td>
                                         <td className="px-2.5 py-2">{i.employee_name}</td>
                                         <td className="px-2.5 py-2">{formatDate(i.due_at)}</td>
                                         <td className="px-2.5 py-2 text-right font-semibold">{daysOverdue(i.due_at)}</td>

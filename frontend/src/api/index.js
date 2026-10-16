@@ -23,7 +23,9 @@ export const authApi = {
     async me() {
         let session;
         try {
-            ({ data: { session } } = await supabase.auth.getSession());
+            ({
+                data: { session },
+            } = await supabase.auth.getSession());
         } catch {
             throw new NetworkError();
         }
@@ -61,9 +63,14 @@ export const authApi = {
 const getTool = (id) => run(supabase.from('v_tools').select('*').eq('id', id).single());
 
 export const toolsApi = {
-    list: ({ q, category, status } = {}) => run(supabase.rpc('list_tools', {
-        p_q: q || null, p_category: idOrNull(category), p_status: status || null,
-    })),
+    list: ({ q, category, status } = {}) =>
+        run(
+            supabase.rpc('list_tools', {
+                p_q: q || null,
+                p_category: idOrNull(category),
+                p_status: status || null,
+            }),
+        ),
 
     async create(body) {
         const row = toolRow(body); // validate first: a bad form never reaches the database
@@ -80,17 +87,35 @@ export const toolsApi = {
 };
 
 export const issuesApi = {
-    list: ({ active, overdue, employee, tool } = {}) => run(supabase.rpc('list_issues', {
-        p_active: flag(active), p_overdue: flag(overdue), p_employee: idOrNull(employee), p_tool: idOrNull(tool),
-    })),
+    list: ({ active, overdue, employee, tool } = {}) =>
+        run(
+            supabase.rpc('list_issues', {
+                p_active: flag(active),
+                p_overdue: flag(overdue),
+                p_employee: idOrNull(employee),
+                p_tool: idOrNull(tool),
+            }),
+        ),
 
-    issue: ({ tool_id: toolId, employee_id: employeeId, due_at: dueAt, issued_at: issuedAt }) => run(supabase.rpc('issue_tool', {
-        p_tool_id: idOrNull(toolId), p_employee_id: idOrNull(employeeId), p_due_at: dueAt || null, p_issued_at: issuedAt || null,
-    })),
+    issue: ({ tool_id: toolId, employee_id: employeeId, due_at: dueAt, issued_at: issuedAt }) =>
+        run(
+            supabase.rpc('issue_tool', {
+                p_tool_id: idOrNull(toolId),
+                p_employee_id: idOrNull(employeeId),
+                p_due_at: dueAt || null,
+                p_issued_at: issuedAt || null,
+            }),
+        ),
 
-    returnTool: (id, { condition_note: note, to_repair: toRepair, returned_at: returnedAt } = {}) => run(supabase.rpc('return_tool', {
-        p_issue_id: id, p_condition_note: note || null, p_to_repair: flag(toRepair), p_returned_at: returnedAt || null,
-    })),
+    returnTool: (id, { condition_note: note, to_repair: toRepair, returned_at: returnedAt } = {}) =>
+        run(
+            supabase.rpc('return_tool', {
+                p_issue_id: id,
+                p_condition_note: note || null,
+                p_to_repair: flag(toRepair),
+                p_returned_at: returnedAt || null,
+            }),
+        ),
 
     extend: (id, { due_at: dueAt } = {}) => run(supabase.rpc('extend_issue', { p_issue_id: id, p_due_at: dueAt || null })),
 

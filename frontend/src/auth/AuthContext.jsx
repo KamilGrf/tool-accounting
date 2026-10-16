@@ -16,8 +16,16 @@ export function AuthProvider({ children }) {
     // On start ask Supabase whether a saved session exists (it is restored from the browser storage).
     useEffect(() => {
         let alive = true;
-        authApi.me().then((u) => alive && setUser(u), () => {}).finally(() => alive && setChecking(false));
-        return () => { alive = false; };
+        authApi
+            .me()
+            .then(
+                (u) => alive && setUser(u),
+                () => {},
+            )
+            .finally(() => alive && setChecking(false));
+        return () => {
+            alive = false;
+        };
     }, []);
 
     // The session ended by itself (refresh failed, signed out in another tab) or an API call got 401.

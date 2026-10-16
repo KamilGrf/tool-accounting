@@ -5,7 +5,12 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('toApiError (database and PostgREST errors)', () => {
     it('passes the user-facing message of our own database errors and maps the status', () => {
-        const cases = [['P0400', 400], ['P0403', 403], ['P0404', 404], ['P0409', 409]];
+        const cases = [
+            ['P0400', 400],
+            ['P0403', 403],
+            ['P0404', 404],
+            ['P0409', 409],
+        ];
         for (const [code, status] of cases) {
             const err = toApiError({ code, message: 'Инструмент нельзя выдать: он уже выдан' });
             expect(err).toBeInstanceOf(ApiError);
@@ -18,8 +23,9 @@ describe('toApiError (database and PostgREST errors)', () => {
         const dup = toApiError({ code: '23505', message: 'duplicate key value violates unique constraint "ux_tools_inv_number"' });
         expect(dup.status).toBe(409);
         expect(dup.message).toBe('Инструмент с таким инвентарным номером уже есть');
-        expect(toApiError({ code: '23505', message: 'duplicate key value violates unique constraint "something_else"' }).message)
-            .toBe('Такая запись уже существует');
+        expect(toApiError({ code: '23505', message: 'duplicate key value violates unique constraint "something_else"' }).message).toBe(
+            'Такая запись уже существует',
+        );
     });
 
     it('maps row-level security and privilege errors to "no permission"', () => {
@@ -63,7 +69,10 @@ describe('toApiError (database and PostgREST errors)', () => {
 
 describe('toAuthError (Supabase Auth errors)', () => {
     it('maps the known codes to Russian messages', () => {
-        expect(toAuthError({ code: 'invalid_credentials', status: 400 })).toMatchObject({ status: 401, message: 'Неверный email или пароль' });
+        expect(toAuthError({ code: 'invalid_credentials', status: 400 })).toMatchObject({
+            status: 401,
+            message: 'Неверный email или пароль',
+        });
         expect(toAuthError({ code: 'user_already_exists', status: 422 })).toMatchObject({ status: 409 });
         expect(toAuthError({ code: 'signup_disabled', status: 422 })).toMatchObject({ status: 403, message: 'Регистрация отключена' });
         expect(toAuthError({ code: 'over_request_rate_limit', status: 429 })).toMatchObject({ status: 429 });
@@ -77,7 +86,9 @@ describe('toAuthError (Supabase Auth errors)', () => {
     });
 
     it('names the code of an unknown error so it can be found in the Auth logs', () => {
-        expect(toAuthError({ code: 'brand_new_code', status: 400 }).message).toBe('Не удалось выполнить операцию (код: brand_new_code). Попробуйте позже');
+        expect(toAuthError({ code: 'brand_new_code', status: 400 }).message).toBe(
+            'Не удалось выполнить операцию (код: brand_new_code). Попробуйте позже',
+        );
         expect(toAuthError({ status: 400 }).message).toBe('Не удалось выполнить операцию. Попробуйте позже');
     });
 
@@ -98,7 +109,9 @@ describe('run', () => {
     });
 
     it('throws a converted error when the response carries one', async () => {
-        const err = await run(Promise.resolve({ data: null, error: { code: 'P0409', message: 'Инструмент уже возвращён' } })).catch((e) => e);
+        const err = await run(Promise.resolve({ data: null, error: { code: 'P0409', message: 'Инструмент уже возвращён' } })).catch(
+            (e) => e,
+        );
         expect(err).toBeInstanceOf(ApiError);
         expect(err.status).toBe(409);
     });

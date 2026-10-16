@@ -33,16 +33,27 @@ export function Button({ variant = 'primary', className = '', ...props }) {
 }
 
 export function Spinner({ label = 'Загрузка…' }) {
-    return <div role="status" className="py-8 text-center text-slate-500">{label}</div>;
+    return (
+        <div role="status" className="py-8 text-center text-slate-500">
+            {label}
+        </div>
+    );
 }
 
 /** Error banner with retry; used for network and server errors (ERR-NET-*). */
 export function ErrorBanner({ error, onRetry }) {
     if (!error) return null;
     return (
-        <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div
+            role="alert"
+            className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+        >
             <span>{error.name === 'NetworkError' ? 'Не удалось загрузить данные. Проверьте соединение' : error.message}</span>
-            {onRetry && <Button variant="secondary" onClick={onRetry}>Повторить</Button>}
+            {onRetry && (
+                <Button variant="secondary" onClick={onRetry}>
+                    Повторить
+                </Button>
+            )}
         </div>
     );
 }
@@ -61,9 +72,15 @@ export function Field({ label, error, children }) {
     const child = children({ id, 'aria-invalid': Boolean(error) || undefined, 'aria-describedby': error ? `${id}-err` : undefined });
     return (
         <div className="mb-3">
-            <label htmlFor={id} className="mb-1 block text-sm text-slate-600">{label}</label>
+            <label htmlFor={id} className="mb-1 block text-sm text-slate-600">
+                {label}
+            </label>
             {child}
-            {error && <p id={`${id}-err`} role="alert" className="mt-1 text-sm text-red-700">{error}</p>}
+            {error && (
+                <p id={`${id}-err`} role="alert" className="mt-1 text-sm text-red-700">
+                    {error}
+                </p>
+            )}
         </div>
     );
 }
@@ -79,9 +96,19 @@ export function Modal({ title, onClose, children }) {
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
     return (
-        <div className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-            <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="max-h-full w-full overflow-auto rounded-t-lg bg-white p-4 shadow-lg sm:max-w-md sm:rounded-lg">
-                <h2 id={titleId} className="mb-3 text-base font-semibold">{title}</h2>
+        <div
+            className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+            onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                className="max-h-full w-full overflow-auto rounded-t-lg bg-white p-4 shadow-lg sm:max-w-md sm:rounded-lg"
+            >
+                <h2 id={titleId} className="mb-3 text-base font-semibold">
+                    {title}
+                </h2>
                 {children}
             </div>
         </div>
@@ -92,10 +119,18 @@ export function Modal({ title, onClose, children }) {
 export function FormFooter({ pending, error, onCancel, submitLabel }) {
     return (
         <>
-            {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}
+            {error && (
+                <p role="alert" className="mb-3 text-sm text-red-700">
+                    {error}
+                </p>
+            )}
             <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={onCancel}>Отмена</Button>
-                <Button type="submit" disabled={pending}>{pending ? 'Подождите…' : submitLabel}</Button>
+                <Button variant="secondary" onClick={onCancel}>
+                    Отмена
+                </Button>
+                <Button type="submit" disabled={pending}>
+                    {pending ? 'Подождите…' : submitLabel}
+                </Button>
             </div>
         </>
     );
