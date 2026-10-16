@@ -1,16 +1,19 @@
 {
   "name": "tool-accounting-frontend",
   "private": true,
-  "version": "1.0.0",
-  "description": "Frontend АС «Учёт инструментов» v2 (ДЗ4): React + Vite + Tailwind",
+  "version": "2.0.0",
+  "description": "АС «Учёт инструментов» (ДЗ5): React + Vite + Tailwind поверх Supabase",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:sql": "bash ../supabase/tests/run.sh",
+    "test:http": "bash ../supabase/tests/http.sh"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"

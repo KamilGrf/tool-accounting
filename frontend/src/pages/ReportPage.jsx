@@ -1,7 +1,9 @@
-import { issuesApi, statsApi, OVERDUE_CSV_URL } from '../api/index.js';
+import { useState } from 'react';
+import { issuesApi, statsApi } from '../api/index.js';
 import { useAsync } from '../hooks/useAsync.js';
+import { downloadText } from '../utils/csv.js';
 import { daysOverdue, formatDate, formatMoney } from '../utils/format.js';
-import { EmptyState, ErrorBanner, Spinner, TableCard } from '../components/ui.jsx';
+import { Button, EmptyState, ErrorBanner, Spinner, TableCard } from '../components/ui.jsx';
 
 function Tile({ value, label, alert }) {
     return (
@@ -17,15 +19,25 @@ export default function ReportPage() {
         const [stats, overdue, usage] = await Promise.all([statsApi.get(), issuesApi.list({ overdue: 1 }), statsApi.usage()]);
         return { stats, overdue, usage };
     }, []);
+    const [exportError, setExportError] = useState(null);
+
+    // The CSV is built in the browser from a fresh list of overdue issues.
+    const exportCsv = async () => {
+        setExportError(null);
+        try {
+            downloadText('overdue.csv', await issuesApi.overdueCsv());
+        } catch (e) {
+            setExportError(e);
+        }
+    };
 
     return (
         <div>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Отчёт по инструментам</h2>
-                <a href={OVERDUE_CSV_URL} download="overdue.csv" className="rounded border border-blue-700 bg-white px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50">
-                    Экспорт CSV
-                </a>
+                <Button variant="secondary" onClick={exportCsv}>Экспорт CSV</Button>
             </div>
+            <ErrorBanner error={exportError} onRetry={exportCsv} />
             <ErrorBanner error={report.error} onRetry={report.reload} />
             {report.loading && !report.data && <Spinner />}
             {report.data && <ReportBody {...report.data} />}

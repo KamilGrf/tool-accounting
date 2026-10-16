@@ -1,64 +1,62 @@
-# АС «Учёт инструментов» — backend на PostgreSQL и интеграция с frontend (ДЗ5)
+# АС «Учёт инструментов» на Supabase (ДЗ5)
 
-Система учёта инструментов склада: каталог, выдача и возврат, контроль просрочек, отчёты. Версия 2: данные хранятся в PostgreSQL, доступ — по входу и ролям.
+Каталог инструментов, выдача и возврат, просрочки, отчёты. Версия на **Supabase**: сервера нет, браузер работает с базой PostgreSQL напрямую, а доступ ограничивают политики безопасности строк (RLS) и функции в самой базе.
 
 ```
-Браузер ──► Frontend (React, Vite :5173) ──/api──► API (Node.js :3001) ──► PostgreSQL 16 (Docker)
-                         cookie сессии (HttpOnly)       роли, валидация, журнал
+Браузер (React, Vite)  ──supabase-js──►  Supabase: Auth (вход) + PostgREST (API) + PostgreSQL
+   статика на Vercel                      роли, RLS, функции выдачи/возврата, отчёты
 ```
 
-Подробности: архитектура, API, безопасность, процесс разработки с ИИ — в [backend_documentation.md](backend_documentation.md).
+Подробности: схема, права, функции, безопасность, проверка и ограничения — в [backend_documentation.md](backend_documentation.md). Предыдущая версия (Node.js API + PostgreSQL в Docker) лежит в папке `ДЗ6`.
 
 ## Что в репозитории
 
 | Путь | Содержание |
 |---|---|
-| `docker-compose.yml` | PostgreSQL 16 + API; секреты из `.env` |
-| `.env.example` | Шаблон настроек (копия → `.env`, `change-me` заменить) |
-| `backend/` | API (Node.js, пакет `pg`), `migrations/`, `Dockerfile`, интеграционные тесты |
-| `frontend/` | React-приложение (интегрировано с API) |
-| `backend_documentation.md` | Документация (архитектура, развёртывание, API, примеры, процесс с ИИ) |
+| `supabase/migrations/` | 4 миграции: схема, профили и роли, права и RLS, представления и функции |
+| `supabase/seed.sql` | Демонстрационные данные (14 инструментов, 5 сотрудников, 3 выдачи) |
+| `supabase/tests/` | Тесты базы: `run.sh` (SQL), `http.sh` (через PostgREST), заглушка `auth_stub.sql` |
+| `frontend/` | React-приложение (`.env.example` — шаблон настроек) |
+| `backend_documentation.md` | Документация |
 
-## Быстрый старт (локально)
+## Быстрый старт
 
-Нужны Docker Desktop и Node.js 22.5+.
+Нужны Node.js 22.5+ и аккаунт на [supabase.com](https://supabase.com) (создаёт человек, я его создать не могу).
 
-```bash
-# 1. Настройки: скопируйте шаблон и замените все change-me
-cp .env.example .env
-#    JWT_SECRET: openssl rand -hex 32 ; пароль БД и пароль руководителя — любые длинные
+**1. Проект Supabase.** Создайте проект, запомните пароль базы (он в приложении не нужен).
 
-# 2. База данных и API (миграции и начальные данные применяются при старте)
-docker compose up -d --build
-curl http://localhost:3001/api/health        # {"status":"ok"}
+**2. База.** Откройте SQL Editor и выполните по очереди файлы из `supabase/migrations/` (по порядку номеров), затем, если нужны демо-данные, `supabase/seed.sql`.
 
-# 3. Frontend
-cd frontend
-npm install
-npm run dev                                  # http://localhost:5173
+**3. Вход.** В разделе Authentication включите вход по email и паролю. Для быстрой проверки отключите подтверждение email (иначе после регистрации приложение попросит подтвердить почту; оба случая обработаны). Чтобы закрыть саморегистрацию, отключите новые регистрации.
+
+**4. Руководитель.** Зарегистрируйтесь в приложении (или создайте пользователя в Authentication → Users), затем выполните в SQL Editor:
+
+```sql
+update public.profiles set role = 'manager' where email = 'ваш@email';
 ```
 
-Регистрация кладовщиков включается переменной `ALLOW_REGISTRATION=true` (по умолчанию выключена; в `.env.example` для демо включена).
+Все новые пользователи становятся кладовщиками: роль ни из токена, ни из запроса клиента взять нельзя.
 
-Войти можно как **руководитель** (`MANAGER_LOGIN` / `MANAGER_PASSWORD` из вашего `.env`) или зарегистрировать **кладовщика** на экране входа.
+**5. Настройки приложения.** Project Settings → API: скопируйте Project URL и anon public key.
+
+```bash
+cd frontend
+cp .env.example .env     # впишите значения
+npm install
+npm run dev              # http://localhost:5173
+```
+
+**6. Публикация (Vercel).** Новый проект из репозитория, **Root Directory = `frontend`**, в Environment Variables добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`. Файл `frontend/vercel.json` уже содержит правило для React Router. В Supabase (Authentication → URL Configuration) укажите адрес сайта на Vercel.
+
+> Названия пунктов меню Supabase и Vercel приведены по памяти и могут отличаться: интерфейс я не открывал, а проект Supabase не создавал.
 
 ## Тесты
 
 ```bash
-# backend: 40 интеграционных тестов на настоящем PostgreSQL (нужен `docker compose up -d db`)
-cd backend && npm install && npm test
-
-# frontend: 23 теста, backend не нужен
-cd frontend && npm test
+cd frontend
+npm test            # 70 тестов интерфейса и слоя доступа (+ 8 интеграционных пропускаются)
+npm run test:sql    # 78 проверок базы на чистом PostgreSQL 16 (нужен Docker)
+npm run test:http   # слой доступа против настоящего PostgREST (нужен Docker)
 ```
 
-Тесты backend создают и пересоздают отдельную базу `tools_test` в том же контейнере; рабочая база `tools` не затрагивается.
-
-## Полезные команды
-
-```bash
-docker compose logs -f api          # журнал API (JSON, по строке на событие)
-docker compose stop db              # смоделировать сбой БД (API ответит 503)
-docker compose down                 # остановить; данные сохраняются в томе pgdata
-docker compose down -v              # остановить и УДАЛИТЬ данные БД
-```
+Проверки базы идут на PostgreSQL 16 с заглушкой схемы `auth`, а не на самом Supabase: вход (GoTrue), настройки панели и ограничения тарифа этим не проверяются.

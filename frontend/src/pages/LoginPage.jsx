@@ -3,26 +3,29 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useSubmit } from '../hooks/useAsync.js';
 import { Button, Field, inputClass } from '../components/ui.jsx';
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 /** Sign-in and registration on one screen. Server messages are shown as-is (ERR-AUTH-04/05). */
 export default function LoginPage() {
     const { signIn, notice } = useAuth();
     const [mode, setMode] = useState('login');
-    const [login, setLogin] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState({});
-    const submit = useSubmit(() => signIn(mode, { login: login.trim(), password }));
+    const submit = useSubmit(() => signIn(mode, { email: email.trim(), password }));
 
     const onSubmit = async (e) => {
         e.preventDefault();
         submit.setError(''); // drop the previous server message before a new attempt
         const next = {};
-        if (!login.trim()) next.login = 'Поле «Логин» обязательно для заполнения';
+        if (!email.trim()) next.email = 'Поле «Email» обязательно для заполнения';
+        else if (!EMAIL_RE.test(email.trim())) next.email = 'Введите корректный email';
         if (!password) next.password = 'Поле «Пароль» обязательно для заполнения';
         else if (mode === 'register' && password.length < 8) next.password = 'Пароль должен быть не короче 8 символов';
         setErrors(next);
         if (Object.keys(next).length) return;
         const ok = await submit.run();
-        if (!ok) setPassword(''); // keep the login, clear the password
+        if (!ok) setPassword(''); // keep the email, clear the password
     };
 
     return (
@@ -32,8 +35,8 @@ export default function LoginPage() {
                 <p className="mb-4 text-sm text-slate-500">{mode === 'login' ? 'Вход в систему' : 'Регистрация кладовщика'}</p>
                 {notice && <p role="status" className="mb-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">{notice}</p>}
 
-                <Field label="Логин" error={errors.login}>
-                    {(p) => <input {...p} autoComplete="username" className={inputClass} value={login} onChange={(e) => setLogin(e.target.value)} />}
+                <Field label="Email" error={errors.email}>
+                    {(p) => <input {...p} type="email" autoComplete="username" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />}
                 </Field>
                 <Field label="Пароль" error={errors.password}>
                     {(p) => (
