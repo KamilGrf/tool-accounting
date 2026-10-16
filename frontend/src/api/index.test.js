@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, NetworkError } from './client.js';
-import { authApi, categoriesApi, employeesApi, issuesApi, statsApi, toolsApi } from './index.js';
+import { authApi, categoriesApi, employeesApi, issuesApi, statsApi, toolsApi, usersApi } from './index.js';
 
 // A fake Supabase client: rpc() answers from `state.rpc`, from(table) returns a chain that records the
 // calls (insert/update/select/eq...) and answers from `state.tables[table]`; auth answers from `state.auth`.
@@ -303,5 +303,26 @@ describe('Google sign-in', () => {
             });
             expect(await authApi.oauthProviders()).toEqual({ google: false });
         });
+    });
+});
+
+describe('users (approval of accounts)', () => {
+    it('list calls list_users and returns the accounts', async () => {
+        h.state.rpc.list_users = () => ok([{ id: 'p1', email: 'new@test.ru', role: 'pending' }]);
+        expect(await usersApi.list()).toEqual([{ id: 'p1', email: 'new@test.ru', role: 'pending' }]);
+        expect(h.client.rpc).toHaveBeenCalledWith('list_users');
+    });
+
+    it('setRole sends the id and the role', async () => {
+        h.state.rpc.set_user_role = () => ok(null);
+        await usersApi.setRole('p1', 'storekeeper');
+        expect(h.client.rpc).toHaveBeenLastCalledWith('set_user_role', { p_user_id: 'p1', p_role: 'storekeeper' });
+    });
+
+    it('the database refusals reach the user as they are', async () => {
+        h.state.rpc.set_user_role = () => fail('P0409', 'Нельзя изменить собственную роль');
+        await expect(usersApi.setRole('me', 'manager')).rejects.toMatchObject({ status: 409, message: 'Нельзя изменить собственную роль' });
+        h.state.rpc.list_users = () => fail('P0403', 'Недостаточно прав');
+        await expect(usersApi.list()).rejects.toMatchObject({ status: 403 });
     });
 });

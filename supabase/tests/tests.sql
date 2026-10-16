@@ -40,8 +40,11 @@ end $$;
 \set keeper2 '''00000000-0000-0000-0000-0000000000a2'''
 \set boss    '''00000000-0000-0000-0000-0000000000b1'''
 
-insert into auth.users(id, email) values (:keeper::uuid, 'keeper@test'), (:keeper2::uuid, 'keeper2@test'), (:boss::uuid, 'boss@test');
+\set newbie '''00000000-0000-0000-0000-0000000000c1'''
+insert into auth.users(id, email) values (:keeper::uuid, 'keeper@test'), (:keeper2::uuid, 'keeper2@test'), (:boss::uuid, 'boss@test'), (:newbie::uuid, 'newbie@test');
+-- New accounts are "pending"; the fixtures approve the staff the tests need (the newbie stays pending).
 update public.profiles set role = 'manager' where id = :boss::uuid;
+update public.profiles set role = 'storekeeper' where id in (:keeper::uuid, :keeper2::uuid);
 
 insert into public.categories(name) values ('Электро'), ('Ручной');
 insert into public.employees(full_name, department) values ('Иванов Пётр', 'Цех'), ('Петров Олег', 'Склад');
@@ -62,7 +65,7 @@ select id as t6 from public.tools where inv_number = 'T-6' \gset
 select id as e1 from public.employees where full_name = 'Иванов Пётр' \gset
 
 -- ------------------------------------------------------------------ roles and profiles
-select t.eq('new Auth user gets the storekeeper role', (select role from public.profiles where id = :keeper::uuid), 'storekeeper');
+select t.eq('an approved storekeeper has the storekeeper role', (select role from public.profiles where id = :keeper::uuid), 'storekeeper');
 select t.eq('manager promoted by SQL', (select role from public.profiles where id = :boss::uuid), 'manager');
 select t.eq('profile keeps the e-mail', (select email from public.profiles where id = :keeper::uuid), 'keeper@test');
 select t.eq('a user sees only his own profile', t.q(:keeper::uuid, 'select count(*) from public.profiles'), '1');
@@ -110,7 +113,7 @@ select t.eq('...and back to stock', t.q(:keeper::uuid, format($q$with r as (upda
 
 -- ------------------------------------------------------------------ issuing
 select t.err('clients cannot write issues directly', t.q(:keeper::uuid, format('insert into public.issues(tool_id, employee_id, issued_at, due_at) values (%s, %s, current_date, current_date + 1) returning 1', :t1, :e1)), '42501');
-select t.eq('issue_tool succeeds and records who issued', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 5)).issued_by', :t1, :e1)), 'keeper@test');
+select t.eq('issue_tool succeeds and shows who issued (local part of the e-mail only)', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 5)).issued_by', :t1, :e1)), 'keeper');
 select t.eq('...the tool becomes "issued"', (select status from public.tools where id = :t1), 'issued');
 select t.err('an issued tool cannot be issued again', t.q(:keeper2::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 5)).id', :t1, :e1)), 'P0409', 'уже выдан');
 select t.err('a tool in repair cannot be issued', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 5)).id', :t3, :e1)), 'P0409', 'находится в ремонте');
@@ -200,6 +203,31 @@ insert into public.client_logs(level, message, created_at) values ('info', 'anci
 select t.eq('purge removes only entries older than the limit', t.q(:boss::uuid, 'select public.purge_client_logs(30)::text'), '1');
 select t.eq('...recent entries stay', t.q(:boss::uuid, $q$select (count(*) > 0)::text from public.list_client_logs()$q$), 'true');
 
+
+-- ------------------------------------------------------------------ access approval (security audit, migration 007)
+select t.eq('a new Auth user waits for approval (role pending)', (select role from public.profiles where id = :newbie::uuid), 'pending');
+select t.eq('...a pending user sees no tools', t.q(:newbie::uuid, 'select count(*) from public.v_tools'), '0');
+select t.eq('...no employees', t.q(:newbie::uuid, 'select count(*) from public.v_employees'), '0');
+select t.eq('...no issues', t.q(:newbie::uuid, 'select count(*) from public.v_issues'), '0');
+select t.eq('...no search results', t.q(:newbie::uuid, 'select count(*) from public.list_tools()'), '0');
+select t.err('...cannot add a tool (row security)', t.q(:newbie::uuid, $q$insert into public.tools(inv_number, name, category_id) values ('P-1', 'Нельзя', 1) returning 1$q$), '42501');
+select t.err('...cannot issue a tool', t.q(:newbie::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 3)).id', :t2, :e1)), 'P0401');
+select t.err('...cannot write to the log', t.q(:newbie::uuid, $q$select public.log_client_event('info', 'x')::text$q$), 'P0401');
+select t.eq('...but still reads its own profile', t.q(:newbie::uuid, 'select role from public.profiles'), 'pending');
+
+select t.err('a storekeeper cannot list users', t.q(:keeper::uuid, 'select count(*) from public.list_users()'), 'P0403');
+select t.err('a storekeeper cannot set roles', t.q(:keeper::uuid, format($q$select public.set_user_role(%L::uuid, 'storekeeper')::text$q$, :newbie)), 'P0403');
+select t.eq('a manager lists the users, pending first', t.q(:boss::uuid, 'select role from public.list_users() limit 1'), 'pending');
+select t.eq('...all of them', t.q(:boss::uuid, 'select count(*) from public.list_users()'), '4');
+select t.err('a role must be known', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'owner')::text$q$, :newbie)), 'P0400', 'роль');
+select t.err('a manager cannot change his own role', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'storekeeper')::text$q$, :boss)), 'P0409', 'собственную');
+select t.err('an unknown user cannot get a role', t.q(:boss::uuid, $q$select public.set_user_role('00000000-0000-0000-0000-00000000ffff'::uuid, 'storekeeper')::text$q$), 'P0404');
+select t.eq('a manager approves the pending user', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'storekeeper')::text$q$, :newbie)), '');
+select t.eq('...who then reads the catalogue', t.q(:newbie::uuid, 'select (count(*) > 0)::text from public.v_tools'), 'true');
+select t.eq('...and the change is journaled with who did it', (select count(*)::text from public.client_logs where message = 'role_changed' and context->>'role' = 'storekeeper' and user_id = :boss::uuid), '1');
+select t.eq('a manager can send the user back to waiting', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'pending')::text$q$, :newbie)), '');
+select t.eq('...who loses access at once', t.q(:newbie::uuid, 'select count(*) from public.v_tools'), '0');
+select t.eq('the e-mail of whoever issued a tool is never handed out', (select count(*)::text from public.v_issues where issued_by like '%@%'), '0');
 
 -- ------------------------------------------------------------------ result
 \o

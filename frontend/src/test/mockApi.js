@@ -43,6 +43,7 @@ export const api = {
     categoriesApi: {},
     statsApi: {},
     logsApi: {},
+    usersApi: {},
 };
 
 /** Fresh mocks: nobody is signed in, lists return the fixtures above. Call it in beforeEach. */
@@ -74,6 +75,7 @@ export function resetApi() {
     });
     Object.assign(api.employeesApi, { list: vi.fn(async () => EMPLOYEES) });
     Object.assign(api.categoriesApi, { list: vi.fn(async () => CATEGORIES) });
+    Object.assign(api.usersApi, { list: vi.fn(async () => []), setRole: vi.fn(async () => null) });
     Object.assign(api.logsApi, { send: vi.fn(async () => {}), list: vi.fn(async () => []) });
     Object.assign(api.statsApi, { get: vi.fn(async () => ({})), usage: vi.fn(async () => []) });
 }

@@ -16,12 +16,13 @@ vi.mock('./supabase.js', async () => {
     return { supabase: { from: (table) => make().from(table), rpc: (name, args) => make().rpc(name, args) }, isConfigured: true };
 });
 
-const { categoriesApi, employeesApi, issuesApi, logsApi, statsApi, toolsApi } = await import('./index.js');
+const { categoriesApi, employeesApi, issuesApi, logsApi, statsApi, toolsApi, usersApi } = await import('./index.js');
 
 const URL = process.env.POSTGREST_URL;
 const SECRET = process.env.POSTGREST_JWT_SECRET;
 const KEEPER = '00000000-0000-0000-0000-0000000000a1';
 const BOSS = '00000000-0000-0000-0000-0000000000b1';
+const NEWBIE = '00000000-0000-0000-0000-0000000000c1';
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 function tokenFor(sub) {
@@ -100,7 +101,7 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         const due = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
         const issue = await issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: due });
         expect(Array.isArray(issue)).toBe(false);
-        expect(issue).toMatchObject({ tool_id: 2, employee_id: 1, issued_by: 'keeper@test', returned_at: null, overdue: 0 });
+        expect(issue).toMatchObject({ tool_id: 2, employee_id: 1, issued_by: 'keeper', returned_at: null, overdue: 0 });
         await expect(issuesApi.issue({ tool_id: 2, employee_id: 1, due_at: due })).rejects.toMatchObject({
             status: 409,
             message: 'Инструмент нельзя выдать: он уже выдан',
@@ -188,5 +189,35 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
 
         as(null);
         await expect(logsApi.send({ level: 'error', message: 'from anonymous' })).rejects.toMatchObject({ code: '42501' });
+    });
+
+    it('access approval: a new account sees nothing until a manager approves it, and loses access when it is closed', async () => {
+        as(NEWBIE);
+        expect(await toolsApi.list()).toEqual([]);
+        expect(await employeesApi.list()).toEqual([]);
+        expect(await categoriesApi.list()).toEqual([]);
+        expect(await issuesApi.list()).toEqual([]);
+
+        as(KEEPER);
+        await expect(usersApi.list()).rejects.toMatchObject({ status: 403, message: 'Недостаточно прав' });
+        await expect(usersApi.setRole(NEWBIE, 'storekeeper')).rejects.toMatchObject({ status: 403 });
+
+        as(BOSS);
+        const users = await usersApi.list();
+        expect(users[0]).toMatchObject({ id: NEWBIE, email: 'newbie@test', role: 'pending' }); // waiting accounts come first
+        await expect(usersApi.setRole(BOSS, 'storekeeper')).rejects.toMatchObject({
+            status: 409,
+            message: 'Нельзя изменить собственную роль',
+        });
+        await expect(usersApi.setRole(NEWBIE, 'owner')).rejects.toMatchObject({ status: 400 });
+        await usersApi.setRole(NEWBIE, 'storekeeper');
+
+        as(NEWBIE);
+        expect((await toolsApi.list()).length).toBeGreaterThan(5);
+
+        as(BOSS);
+        await usersApi.setRole(NEWBIE, 'pending');
+        as(NEWBIE);
+        expect(await toolsApi.list()).toEqual([]);
     });
 });

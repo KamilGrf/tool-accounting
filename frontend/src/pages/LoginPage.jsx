@@ -44,7 +44,9 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-surface p-4">
             <form onSubmit={onSubmit} noValidate className="w-full max-w-sm rounded-lg bg-white p-5 shadow">
                 <h1 className="mb-1 text-lg font-semibold">АС «Учёт инструментов»</h1>
-                <p className="mb-4 text-sm text-slate-500">{mode === 'login' ? 'Вход в систему' : 'Регистрация кладовщика'}</p>
+                <p className="mb-4 text-sm text-slate-500">
+                    {mode === 'login' ? 'Вход в систему' : 'Регистрация (доступ после подтверждения руководителем)'}
+                </p>
                 {notice && (
                     <p role="status" className="mb-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
                         {notice}

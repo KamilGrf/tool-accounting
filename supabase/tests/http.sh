@@ -22,7 +22,7 @@ for _ in $(seq 1 60); do echo 'select 1' | "${PSQL[@]}" >/dev/null 2>&1 && break
 for f in "$HERE"/../migrations/*.sql; do "${PSQL[@]}" < "$f"; done
 "${PSQL[@]}" < "$HERE/../seed.sql" >/dev/null
 # Two signed-in users the test impersonates (ids are fixed in postgrest.test.js).
-"${PSQL[@]}" -c "insert into auth.users(id, email) values ('00000000-0000-0000-0000-0000000000a1', 'keeper@test'), ('00000000-0000-0000-0000-0000000000b1', 'boss@test'); update public.profiles set role = 'manager' where email = 'boss@test';"
+"${PSQL[@]}" -c "insert into auth.users(id, email) values ('00000000-0000-0000-0000-0000000000a1', 'keeper@test'), ('00000000-0000-0000-0000-0000000000b1', 'boss@test'), ('00000000-0000-0000-0000-0000000000c1', 'newbie@test'); update public.profiles set role = 'manager' where email = 'boss@test'; update public.profiles set role = 'storekeeper' where email = 'keeper@test';"
 
 docker run -d --name "$REST" --network "$NET" -p 127.0.0.1:3100:3000 \
     -e PGRST_DB_URI="postgres://authenticator:test@$DB:5432/postgres" \

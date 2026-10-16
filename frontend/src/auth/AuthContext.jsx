@@ -110,4 +110,4 @@ export function useAuth() {
     return ctx;
 }
 
-export const ROLE_LABELS = { storekeeper: 'Кладовщик', manager: 'Руководитель' };
+export const ROLE_LABELS = { pending: 'Ожидает подтверждения', storekeeper: 'Кладовщик', manager: 'Руководитель' };
