@@ -9,7 +9,7 @@
    статика на Vercel                      роли, RLS, функции выдачи/возврата, отчёты
 ```
 
-Подробности: схема, права, функции, безопасность, проверка и ограничения — в [backend_documentation.md](backend_documentation.md). Предыдущая версия (Node.js API + PostgreSQL в Docker) лежит в папке `ДЗ6` репозитория [MMI-DZ](https://github.com/KamilGrf/MMI-DZ) и в истории этого репозитория.
+Подробности: схема, права, функции, безопасность, проверка и ограничения — в [backend_documentation.md](backend_documentation.md). Предыдущая версия (Node.js API + PostgreSQL в Docker) сохранена в истории этого репозитория.
 
 ## Что в репозитории
 
