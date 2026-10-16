@@ -145,7 +145,7 @@ select t.eq('return to repair sets the status and the tool note', t.q(:keeper::u
 select t.eq('...status is repair', (select status from public.tools where id = :t1), 'repair');
 select t.eq('...the tool note is set', (select note from public.tools where id = :t1), 'Заменить патрон');
 select t.err('a tool with history cannot be deleted', t.q(:boss::uuid, format('with r as (delete from public.tools where id = %s returning 1) select count(*) from r', :t1)), '23503');
-select t.err('an employee with history cannot be deleted', t.q(:keeper::uuid, format('with r as (delete from public.employees where id = %s returning 1) select count(*) from r', :e1)), '23503');
+select t.err('an employee with history cannot be deleted', t.q(:boss::uuid, format('with r as (delete from public.employees where id = %s returning 1) select count(*) from r', :e1)), '23503');
 
 -- ------------------------------------------------------------------ overdue and reports
 select set_config('app.internal_status_change', 'on', false);
@@ -235,7 +235,8 @@ select t.err('...nor as written off', t.q(:keeper::uuid, $q$insert into public.t
 select t.eq('...but in stock it is fine', t.q(:keeper::uuid, $q$with r as (insert into public.tools(inv_number, name, category_id, status) values ('H-3', 'Обычный', 1, 'in_stock') returning 1) select count(*) from r$q$), '1');
 select t.eq('a storekeeper cannot delete an employee (RLS)', t.q(:keeper::uuid, 'with r as (delete from public.employees where id = 2 returning 1) select count(*) from r'), '0');
 select t.eq('a storekeeper cannot delete a category (RLS)', t.q(:keeper::uuid, 'with r as (delete from public.categories where id = 2 returning 1) select count(*) from r'), '0');
-select t.eq('a manager can delete a category without tools', t.q(:boss::uuid, $q$with c as (insert into public.categories(name) values ('Временная') returning id), r as (delete from public.categories where id = (select id from c) returning 1) select count(*) from r$q$), '1');
+insert into public.categories(name) values ('Временная');
+select t.eq('a manager can delete a category without tools', t.q(:boss::uuid, $q$with r as (delete from public.categories where name = 'Временная' returning 1) select count(*) from r$q$), '1');
 
 select t.eq('list_users tells whether the e-mail is confirmed', t.q(:boss::uuid, $q$select string_agg(email || '=' || email_confirmed, ',' order by email) from public.list_users() where email in ('boss@test', 'newbie@test')$q$), 'boss@test=true,newbie@test=false');
 select t.err('the audit table cannot be read directly', t.q(:boss::uuid, 'select count(*) from public.audit_log'), '42501');
@@ -252,8 +253,11 @@ select t.eq('...for that user only', t.q(:keeper::uuid, $q$select public.log_cli
 
 select t.err('a return date more than a year ahead is refused', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 400)).id', :t2, :e1)), 'P0400', 'через год');
 select t.err('...even in the year 9999', t.q(:keeper::uuid, format($q$select (public.issue_tool(%s, %s, '9999-12-31'::date)).id$q$, :t2, :e1)), 'P0400', 'через год');
-select t.err('extending beyond a year from the issue date is refused', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 400)).id', :i1)), 'P0400', 'через год');
-select t.eq('extending within a year is fine', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 300)).due_at = public.today_local() + 300', :i1)), 'true');
+select id as hid from public.tools where inv_number = 'H-3' \gset
+select t.eq('a fresh issue for the extension checks', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 5)).id is not null', :hid, :e1)), 'true');
+select id as i2 from public.issues where tool_id = :hid and returned_at is null \gset
+select t.err('extending beyond a year from the issue date is refused', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 400)).id', :i2)), 'P0400', 'через год');
+select t.eq('extending within a year is fine', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 300)).due_at = public.today_local() + 300', :i2)), 'true');
 
 -- ------------------------------------------------------------------ result
 \o
