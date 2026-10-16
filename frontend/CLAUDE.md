@@ -8,7 +8,7 @@
 ## Контекст проекта
 2. Стек: React 19, React Router 7, Vite, Tailwind CSS 4, Vitest + Testing Library; данные и вход — Supabase (`@supabase/supabase-js`). Переменные: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (`.env`, шаблон `.env.example`).
 3. Структура: `src/api` (клиент Supabase, разбор ошибок, функции по сценариям), `src/auth`, `src/hooks`, `src/components`, `src/pages`, `src/utils` (чистые функции), `src/test` (хелперы тестов). База: `../supabase/migrations` (схема, RLS, функции), `../supabase/seed.sql`, `../supabase/tests`.
-4. Команды: `npm run dev`, `npm test`, `npm run build`; проверка базы: `npm run test:sql` и `npm run test:http` (нужен Docker). Перед сообщением «готово» запусти `npm test` и сообщи результат; при изменении SQL — ещё `test:sql` и `test:http`.
+4. Команды: `npm run dev`, `npm run lint`, `npm run format:check`, `npm test`, `npm run build`. Проверки базы (`../supabase/tests`) выполняет CI (задание «Database»). Перед сообщением «готово» запусти `npm run lint`, `npm run format:check` и `npm test`; при изменении SQL запушь ветку и сообщи результат CI.
 
 ## Стиль кода
 5. Функциональные компоненты и хуки; файлы компонентов — `PascalCase.jsx`, прочие — `camelCase.js`; отступ 4 пробела, одинарные кавычки, точка с запятой. Комментарии в коде — на английском и только «зачем». В SQL — ключевые слова строчными, комментарии на английском.

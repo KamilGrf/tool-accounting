@@ -11,9 +11,7 @@
         "lint": "eslint . --max-warnings 0",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "test": "vitest run",
-        "test:sql": "bash ../supabase/tests/run.sh",
-        "test:http": "bash ../supabase/tests/http.sh"
+        "test": "vitest run"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.118.0",

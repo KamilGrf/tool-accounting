@@ -24,11 +24,13 @@ npm run dev              # http://localhost:5173
 ## Тесты и сборка
 
 ```bash
-npm test            # 70 тестов; интеграционные (8) пропускаются без PostgREST
-npm run test:http   # слой доступа против настоящего PostgREST (Docker)
-npm run test:sql    # проверки базы на PostgreSQL 16 (Docker)
-npm run build       # продакшен-сборка в dist/
+npm run lint           # ESLint
+npm run format:check   # Prettier (npm run format: исправить)
+npm test               # 70 тестов; интеграционные (8) пропускаются без PostgREST
+npm run build          # продакшен-сборка в dist/
 ```
+
+Проверки базы выполняются в CI (GitHub Actions, задание «Database») при каждом пуше.
 
 ## Структура
 

@@ -56,9 +56,11 @@ npm run dev              # http://localhost:5173
 
 ```bash
 cd frontend
-npm test            # 70 тестов интерфейса и слоя доступа (+ 8 интеграционных пропускаются)
-npm run test:sql    # 78 проверок базы на чистом PostgreSQL 16 (нужен Docker)
-npm run test:http   # слой доступа против настоящего PostgREST (нужен Docker)
+npm run lint           # ESLint
+npm run format:check   # Prettier
+npm test               # 70 тестов интерфейса и слоя доступа (+ 8 интеграционных пропускаются)
 ```
+
+Проверки базы (78 проверок SQL и слой доступа против PostgREST, скрипты `supabase/tests/run.sh` и `http.sh`) локально запускать не нужно: они выполняются в CI (GitHub Actions, задание «Database») при каждом пуше.
 
 Проверки базы идут на PostgreSQL 16 с заглушкой схемы `auth`, а не на самом Supabase: вход (GoTrue), настройки панели и ограничения тарифа этим не проверяются.
