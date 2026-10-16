@@ -16,7 +16,7 @@ vi.mock('./supabase.js', async () => {
     return { supabase: { from: (table) => make().from(table), rpc: (name, args) => make().rpc(name, args) }, isConfigured: true };
 });
 
-const { categoriesApi, employeesApi, issuesApi, statsApi, toolsApi } = await import('./index.js');
+const { categoriesApi, employeesApi, issuesApi, logsApi, statsApi, toolsApi } = await import('./index.js');
 
 const URL = process.env.POSTGREST_URL;
 const SECRET = process.env.POSTGREST_JWT_SECRET;
@@ -157,5 +157,36 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         const csv = await issuesApi.overdueCsv();
         expect(csv.startsWith(String.fromCharCode(0xfeff) + 'Инв. номер;')).toBe(true);
         expect(csv).toContain('ИНВ-0001;Дрель ударная Bosch GSB 13 RE;Иванов Пётр Сергеевич');
+    });
+    it('the health probe answers without signing in', async () => {
+        const res = await fetch(`${URL}/rpc/health`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toMatchObject({ ok: true });
+    });
+
+    it('the central log: a storekeeper appends, only a manager reads, anonymous visitors cannot write', async () => {
+        as(KEEPER);
+        await logsApi.send({
+            level: 'error',
+            message: 'integration test entry',
+            context: { op: 'rpc/x', status: 500 },
+            route: '/tools',
+            release: 'abc1234',
+        });
+        await expect(logsApi.list()).rejects.toMatchObject({ status: 403, message: 'Недостаточно прав' });
+
+        as(BOSS);
+        const rows = await logsApi.list({ level: 'error' });
+        expect(rows[0]).toMatchObject({
+            level: 'error',
+            message: 'integration test entry',
+            route: '/tools',
+            release: 'abc1234',
+            context: { op: 'rpc/x', status: 500 },
+        });
+        expect(typeof rows[0].id).toBe('number');
+
+        as(null);
+        await expect(logsApi.send({ level: 'error', message: 'from anonymous' })).rejects.toMatchObject({ code: '42501' });
     });
 });

@@ -3,6 +3,8 @@
 // The database raises user-facing Russian messages with SQLSTATE P0400/P0401/P0403/P0404/P0409
 // (see supabase/migrations/..._logic.sql); everything else is mapped here.
 
+import { logger } from '../logger.js';
+
 export class ApiError extends Error {
     constructor(status, message) {
         super(message);
@@ -105,14 +107,37 @@ export function toAuthError(error) {
     return new ApiError(error?.status >= 500 ? 500 : 400, `Не удалось выполнить операцию${hint}. Попробуйте позже`);
 }
 
+/** Which call failed, e.g. "rpc/list_tools" (the request builder knows its URL; a plain promise does not). */
+function operationOf(request) {
+    const path = request?.url?.pathname;
+    return typeof path === 'string' ? path.replace('/rest/v1/', '') : 'unknown';
+}
+
+/**
+ * Journal only what points to a problem: no connection, server errors, refused access.
+ * Validation errors and conflicts are the user's own business and stay out of the log.
+ */
+function logFailure(request, error) {
+    const op = operationOf(request);
+    if (error instanceof NetworkError) logger.warn('network_error', { op });
+    else if (error.status >= 500) logger.error('api_error', { op, status: error.status });
+    else if (error.status === 401 || error.status === 403) logger.warn('api_denied', { op, status: error.status });
+}
+
 /** Await a Supabase request and return its data; any failure becomes ApiError / NetworkError. */
 export async function run(request) {
     let res;
     try {
         res = await request;
     } catch (e) {
-        throw toApiError(e);
+        const error = toApiError(e);
+        logFailure(request, error);
+        throw error;
     }
-    if (res.error) throw toApiError(res.error);
+    if (res.error) {
+        const error = toApiError(res.error);
+        logFailure(request, error);
+        throw error;
+    }
     return res.data;
 }

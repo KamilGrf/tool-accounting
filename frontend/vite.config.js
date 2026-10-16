@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 // No backend to proxy to: the app talks to Supabase directly (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
 export default defineConfig({
     plugins: [react(), tailwindcss()],
+    // The commit that was built (set by Vercel), recorded in every log entry as "release".
+    define: { 'import.meta.env.VITE_RELEASE': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)) },
     server: { port: 5173 },
     test: {
         environment: 'jsdom',

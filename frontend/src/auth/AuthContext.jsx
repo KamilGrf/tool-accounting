@@ -1,8 +1,9 @@
 // Session state for the whole app: who is signed in, and what happens when the session ends.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { authApi } from '../api/index.js';
+import { authApi, logsApi } from '../api/index.js';
 import { AUTH_EXPIRED } from '../api/client.js';
 import { trackEvent } from '../analytics.js';
+import { logger, setRemoteSink } from '../logger.js';
 import { clearOAuthParams, isOAuthReturn, readOAuthError } from './oauthRedirect.js';
 
 export const AuthContext = createContext(null);
@@ -42,6 +43,11 @@ export function AuthProvider({ children }) {
         };
     }, [redirect]);
 
+    // Warnings and errors go to the central log only while somebody is signed in (the database refuses anonymous entries).
+    useEffect(() => {
+        setRemoteSink(user ? logsApi.send : null);
+    }, [user]);
+
     // The session ended by itself (refresh failed, signed out in another tab) or an API call got 401.
     useEffect(() => {
         const onExpired = () => {
@@ -60,7 +66,14 @@ export function AuthProvider({ children }) {
     }, []);
 
     const signIn = useCallback(async (mode, credentials) => {
-        const result = await (mode === 'register' ? authApi.register(credentials) : authApi.login(credentials));
+        let result;
+        try {
+            result = await (mode === 'register' ? authApi.register(credentials) : authApi.login(credentials));
+        } catch (error) {
+            // Only the kind of attempt and the answer code: never the e-mail or the password.
+            logger.warn('auth_failed', { mode, status: error.status });
+            throw error;
+        }
         if (result.needsConfirmation) {
             setNotice('Проверьте почту: мы отправили ссылку для подтверждения email. После подтверждения войдите.');
             return;

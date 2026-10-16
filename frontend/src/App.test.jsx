@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { ApiError, AUTH_EXPIRED } from './api/client.js';
 import { api, resetApi } from './test/mockApi.js';
+import { logger, setLogLevel, setRemoteSink } from './logger.js';
 
 const analytics = vi.hoisted(() => ({ trackEvent: vi.fn(), trackPageView: vi.fn(), initAnalytics: vi.fn() }));
 vi.mock('./analytics.js', () => ({ isAnalyticsConfigured: false, getConsent: () => null, setConsent: vi.fn(), ...analytics }));
@@ -225,5 +226,52 @@ describe('privacy policy page', () => {
         renderApp('/privacy');
         const text = (await screen.findByRole('main')).textContent;
         for (const word of ['Supabase', 'Vercel', 'Google Analytics', 'localStorage']) expect(text).toContain(word);
+    });
+});
+
+describe('central log', () => {
+    beforeEach(() => {
+        setLogLevel('error');
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+        setLogLevel('silent');
+        setRemoteSink(null);
+    });
+
+    it('is not written to while nobody is signed in', async () => {
+        renderApp();
+        await screen.findByRole('button', { name: 'Войти' });
+        logger.error('before sign-in');
+        expect(api.logsApi.send).not.toHaveBeenCalled();
+    });
+
+    it('is written to while somebody is signed in, and stops after sign-out', async () => {
+        signedInAs('storekeeper');
+        renderApp();
+        await screen.findByTestId('whoami');
+        logger.error('after sign-in', { op: 'x' });
+        expect(api.logsApi.send).toHaveBeenCalledOnce();
+        expect(api.logsApi.send.mock.calls[0][0]).toMatchObject({ level: 'error', message: 'after sign-in' });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+        await screen.findByRole('button', { name: 'Войти' });
+        logger.error('after sign-out');
+        expect(api.logsApi.send).toHaveBeenCalledOnce();
+    });
+
+    it('journals a failed sign-in with the kind of attempt and the code, but never the e-mail or the password', async () => {
+        api.authApi.login.mockRejectedValue(new ApiError(401, 'Неверный email или пароль'));
+        setLogLevel('warn');
+        renderApp();
+        await userEvent.type(await screen.findByLabelText('Email'), 'ivan@test.ru');
+        await userEvent.type(screen.getByLabelText('Пароль'), 'wrong-pass-123');
+        await userEvent.click(screen.getByRole('button', { name: 'Войти' }));
+        await screen.findByText('Неверный email или пароль');
+        const line = console.warn.mock.calls.map(([l]) => l).find((l) => l.includes('auth_failed'));
+        expect(JSON.parse(line)).toMatchObject({ level: 'warn', message: 'auth_failed', context: { mode: 'login', status: 401 } });
+        expect(line).not.toContain('ivan@test.ru');
+        expect(line).not.toContain('wrong-pass-123');
     });
 });

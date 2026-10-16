@@ -152,3 +152,20 @@ export const statsApi = {
     get: () => run(supabase.rpc('report_stats')),
     usage: () => run(supabase.rpc('report_usage')),
 };
+
+export const logsApi = {
+    /** Sink of the logger. It calls the client directly (not run()): a failed log must never produce another log. */
+    async send(entry) {
+        const { error } = await supabase.rpc('log_client_event', {
+            p_level: entry.level,
+            p_message: entry.message,
+            p_context: entry.context ?? {},
+            p_route: entry.route ?? null,
+            p_release: entry.release ?? null,
+        });
+        if (error) throw error;
+    },
+
+    /** Entries of the central log, newest first (managers only). */
+    list: ({ level, limit } = {}) => run(supabase.rpc('list_client_logs', { p_level: level || null, p_limit: limit ?? 100 })),
+};

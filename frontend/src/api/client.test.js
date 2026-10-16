@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLogLevel } from '../logger.js';
 import { ApiError, AUTH_EXPIRED, NetworkError, run, toApiError, toAuthError } from './client.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -118,5 +119,53 @@ describe('run', () => {
 
     it('converts a thrown failure too', async () => {
         await expect(run(Promise.reject(new TypeError('Failed to fetch')))).rejects.toBeInstanceOf(NetworkError);
+    });
+});
+
+describe('run: what reaches the journal', () => {
+    const request = (result, path = '/rest/v1/rpc/list_tools') =>
+        Object.assign(Promise.resolve(result), { url: new URL(`https://p.supabase.co${path}`) });
+    const entries = (method) => console[method].mock.calls.map(([line]) => JSON.parse(line));
+
+    beforeEach(() => {
+        setLogLevel('debug');
+        for (const method of ['debug', 'info', 'warn', 'error']) vi.spyOn(console, method).mockImplementation(() => {});
+    });
+    afterEach(() => setLogLevel('silent'));
+
+    it('records a lost connection as a warning with the name of the call', async () => {
+        await run(request(Promise.reject(new TypeError('Failed to fetch')))).catch(() => {});
+        expect(entries('warn')[0]).toMatchObject({ message: 'network_error', context: { op: 'rpc/list_tools' } });
+    });
+
+    it('records a server error as an error with its status', async () => {
+        await run(request({ data: null, error: { code: 'XX000', message: 'internal' } }, '/rest/v1/tools')).catch(() => {});
+        expect(entries('error')[0]).toMatchObject({ message: 'api_error', context: { op: 'tools', status: 500 } });
+    });
+
+    it('records refused access as a warning', async () => {
+        await run(request({ data: null, error: { code: '42501', message: 'permission denied' } })).catch(() => {});
+        expect(entries('warn')[0]).toMatchObject({ message: 'api_denied', context: { op: 'rpc/list_tools', status: 403 } });
+    });
+
+    it("keeps the user's own mistakes out of the journal (validation, conflicts, not found)", async () => {
+        for (const code of ['P0400', 'P0409', 'P0404', '23505', '23514']) {
+            await run(request({ data: null, error: { code, message: 'x' } })).catch(() => {});
+        }
+        expect(console.warn).not.toHaveBeenCalled();
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    it('does not leak the text of the error into the journal', async () => {
+        await run(
+            request({ data: null, error: { code: 'XX000', message: 'relation "secret_table" does not exist for ivan@test.ru' } }),
+        ).catch(() => {});
+        expect(JSON.stringify(entries('error'))).not.toContain('secret_table');
+        expect(JSON.stringify(entries('error'))).not.toContain('ivan@test.ru');
+    });
+
+    it('says "unknown" when the request has no URL (a plain promise)', async () => {
+        await run(Promise.reject(new TypeError('Failed to fetch'))).catch(() => {});
+        expect(entries('warn')[0].context.op).toBe('unknown');
     });
 });
