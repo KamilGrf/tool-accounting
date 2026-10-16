@@ -1,0 +1,42 @@
+name: Monitor
+
+# Checks the live site every 15 minutes. A failed run is the alert: GitHub e-mails failed workflow runs to the
+# person who last changed this schedule. The same URL can be given to an external monitor (see integration_documentation.md).
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SITE_URL: https://tool-accounting.vercel.app
+
+jobs:
+  health:
+    name: Site and health endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Health endpoint (database, sign-in service, Google)
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o health.json -w '%{http_code}' --max-time 30 "$SITE_URL/api/health" || echo 000)
+            echo "attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ] && jq -e '.status == "ok" or .status == "degraded"' health.json >/dev/null 2>&1; then break; fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::The health endpoint is not healthy (last HTTP code: $code)"
+              cat health.json || true
+              exit 1
+            fi
+            sleep 20
+          done
+          cat health.json
+          status=$(jq -r '.status' health.json)
+          echo "Health: **$status**, commit \`$(jq -r '.commit' health.json)\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" = "degraded" ]; then echo "::warning::Degraded: a non-critical check failed (see the JSON above)"; fi
+
+      - name: Front page
+        run: curl -sS --max-time 30 -f "$SITE_URL/" | grep -q 'Учёт инструментов'

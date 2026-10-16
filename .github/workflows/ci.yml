@@ -74,3 +74,37 @@ jobs:
 
       - name: Frontend API layer against PostgREST
         run: bash supabase/tests/http.sh
+
+  deploy-verify:
+    name: Deployed site (waits for Vercel, then checks health)
+    needs: [frontend, database]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SITE_URL: https://tool-accounting.vercel.app
+    steps:
+      - name: Wait until this commit is live and healthy
+        run: |
+          set -uo pipefail
+          expected="${GITHUB_SHA:0:7}"
+          commit=""
+          code=000
+          for attempt in $(seq 1 40); do
+            code=$(curl -sS -o health.json -w '%{http_code}' --max-time 30 "$SITE_URL/api/health" || echo 000)
+            commit=$(jq -r '.commit // empty' health.json 2>/dev/null || true)
+            echo "attempt $attempt: HTTP $code, live commit: ${commit:-none}, expected: $expected"
+            if [ "$commit" = "$expected" ]; then break; fi
+            sleep 15
+          done
+          if [ "$commit" != "$expected" ]; then
+            echo "::error::Commit $expected did not go live within 10 minutes"
+            exit 1
+          fi
+          if [ "$code" != "200" ]; then
+            echo "::error::Commit $expected is live but the health check answered HTTP $code"
+            cat health.json
+            exit 1
+          fi
+          jq -e '.status == "ok" or .status == "degraded"' health.json
+          echo "Live commit \`$commit\`: $(jq -r '.status' health.json)" >> "$GITHUB_STEP_SUMMARY"
