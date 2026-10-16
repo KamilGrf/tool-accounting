@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { isConfigured } from './api/index.js';
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
@@ -7,11 +8,13 @@ import PageTracker from './components/PageTracker.jsx';
 import { Spinner } from './components/ui.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import PendingPage from './pages/PendingPage.jsx';
-import PrivacyPage from './pages/PrivacyPage.jsx';
-import ToolsPage from './pages/ToolsPage.jsx';
-import IssuesPage from './pages/IssuesPage.jsx';
-import ReportPage from './pages/ReportPage.jsx';
-import UsersPage from './pages/UsersPage.jsx';
+
+// Pages are loaded when first opened: the sign-in screen does not download the report or user management code.
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
+const ToolsPage = lazy(() => import('./pages/ToolsPage.jsx'));
+const IssuesPage = lazy(() => import('./pages/IssuesPage.jsx'));
+const ReportPage = lazy(() => import('./pages/ReportPage.jsx'));
+const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 
 function MissingConfig() {
     return (
@@ -36,7 +39,12 @@ function Forbidden() {
 function AppRoutes() {
     const { user, checking } = useAuth();
     const { pathname } = useLocation();
-    if (pathname === '/privacy') return <PrivacyPage />; // public: Google requires a policy link, no sign-in needed
+    if (pathname === '/privacy')
+        return (
+            <Suspense fallback={<Spinner />}>
+                <PrivacyPage />
+            </Suspense>
+        ); // public: Google requires a policy link, no sign-in needed
     if (checking) return <Spinner />;
     if (!user) return <LoginPage />; // ERR-AUTH-01: no session -> sign-in screen
     if (user.role === 'pending') return <PendingPage />; // not approved yet: no data, no menu

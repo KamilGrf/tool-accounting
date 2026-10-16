@@ -220,6 +220,7 @@ describe('privacy policy page', () => {
         renderApp();
         const link = await screen.findByRole('link', { name: 'Политика конфиденциальности' });
         expect(link).toHaveAttribute('href', '/privacy');
+        expect(link.closest('form')).not.toBeNull(); // inside the sign-in card, not beside it
     });
 
     it('says what is collected and who receives it', async () => {

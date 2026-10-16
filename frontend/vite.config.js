@@ -7,6 +7,19 @@ export default defineConfig({
     plugins: [react(), tailwindcss()],
     // The commit that was built (set by Vercel), recorded in every log entry as "release".
     define: { 'import.meta.env.VITE_RELEASE': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)) },
+    build: {
+        rolldownOptions: {
+            output: {
+                // Libraries change rarely: separate files stay in the browser cache across releases of the application.
+                codeSplitting: {
+                    groups: [
+                        { name: 'supabase', test: /node_modules.@supabase/ },
+                        { name: 'react', test: /node_modules.(react|react-dom|react-router|react-router-dom|scheduler)./ },
+                    ],
+                },
+            },
+        },
+    },
     server: { port: 5173 },
     test: {
         environment: 'jsdom',

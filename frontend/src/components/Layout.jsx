@@ -1,6 +1,8 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ROLE_LABELS, useAuth } from '../auth/AuthContext.jsx';
 import { AnalyticsSetting } from './ConsentBanner.jsx';
+import { Spinner } from './ui.jsx';
 
 const LINKS = [
     { to: '/tools', label: 'Инструменты' },
@@ -45,7 +47,9 @@ export default function Layout() {
                 </div>
             </aside>
             <main className="min-w-0 p-3 sm:p-5">
-                <Outlet />
+                <Suspense fallback={<Spinner />}>
+                    <Outlet />
+                </Suspense>
             </main>
         </div>
     );

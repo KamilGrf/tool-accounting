@@ -110,12 +110,12 @@ export default function LoginPage() {
                         </Button>
                     </div>
                 )}
+                <p className="mt-4 text-center text-xs text-slate-500">
+                    <Link to="/privacy" className="underline">
+                        Политика конфиденциальности
+                    </Link>
+                </p>
             </form>
-            <p className="mt-4 text-center text-xs text-slate-500">
-                <Link to="/privacy" className="underline">
-                    Политика конфиденциальности
-                </Link>
-            </p>
         </div>
     );
 }
