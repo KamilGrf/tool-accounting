@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toolsApi, issuesApi, employeesApi } from '../api/index.js';
 import { useAsync, useSubmit } from '../hooks/useAsync.js';
+import { trackEvent } from '../analytics.js';
 import { formatDate, todayIso } from '../utils/format.js';
 import { Field, FormFooter, Modal, inputClass } from './ui.jsx';
 
@@ -13,6 +14,7 @@ export function ToolForm({ categories, onSaved, onClose }) {
     const [errors, setErrors] = useState({});
     const submit = useSubmit(async () => {
         await toolsApi.create(values);
+        trackEvent('tool_created');
         onSaved();
     });
     const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }));
@@ -71,6 +73,7 @@ export function IssueForm({ tool, onSaved, onClose }) {
     const [errors, setErrors] = useState({});
     const submit = useSubmit(async () => {
         await issuesApi.issue({ tool_id: tool.id, employee_id: Number(employeeId), due_at: dueAt });
+        trackEvent('tool_issued');
         onSaved();
     });
 
@@ -135,6 +138,7 @@ export function ReturnForm({ issue, onSaved, onClose }) {
     const [toRepair, setToRepair] = useState(false);
     const submit = useSubmit(async () => {
         await issuesApi.returnTool(issue.id, { condition_note: note, to_repair: toRepair });
+        trackEvent('tool_returned', { to_repair: Boolean(toRepair) });
         onSaved();
     });
     const onSubmit = async (e) => {
@@ -171,6 +175,7 @@ export function ExtendForm({ issue, onSaved, onClose }) {
     const [error, setError] = useState('');
     const submit = useSubmit(async () => {
         await issuesApi.extend(issue.id, { due_at: dueAt });
+        trackEvent('issue_extended');
         onSaved();
     });
     const onSubmit = async (e) => {
@@ -197,6 +202,7 @@ export function ExtendForm({ issue, onSaved, onClose }) {
 export function WriteOffForm({ tool, onSaved, onClose }) {
     const submit = useSubmit(async () => {
         await toolsApi.update(tool.id, { ...tool, status: 'written_off' });
+        trackEvent('tool_written_off');
         onSaved();
     });
     const onSubmit = async (e) => {

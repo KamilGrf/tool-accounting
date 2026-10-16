@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, NetworkError } from './client.js';
 import { authApi, categoriesApi, employeesApi, issuesApi, statsApi, toolsApi } from './index.js';
 
@@ -33,13 +33,19 @@ const h = vi.hoisted(() => {
             getSession: vi.fn(async () => ({ data: { session: state.auth.session ?? null } })),
             signInWithPassword: vi.fn(async () => state.auth.signIn),
             signUp: vi.fn(async () => state.auth.signUp),
+            signInWithOAuth: vi.fn(async () => state.auth.oauth ?? { data: {}, error: null }),
             signOut: vi.fn(async () => ({ error: null })),
             onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
         },
     };
     return { state, client };
 });
-vi.mock('./supabase.js', () => ({ supabase: h.client, isConfigured: true }));
+vi.mock('./supabase.js', () => ({
+    supabase: h.client,
+    isConfigured: true,
+    projectConfig: { url: 'https://p.supabase.co', anonKey: 'public-key' },
+    fetchWithTimeout: (...args) => fetch(...args),
+}));
 
 const ok = (data) => ({ data, error: null });
 const fail = (code, message) => ({ data: null, error: { code, message } });
@@ -260,5 +266,42 @@ describe('authentication', () => {
     it('logout signs out of Supabase', async () => {
         await authApi.logout();
         expect(h.client.auth.signOut).toHaveBeenCalledOnce();
+    });
+});
+
+describe('Google sign-in', () => {
+    it('loginWithGoogle starts the OAuth flow and returns to this site', async () => {
+        await authApi.loginWithGoogle();
+        expect(h.client.auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: window.location.origin } });
+    });
+
+    it('loginWithGoogle reports a failure to start', async () => {
+        h.state.auth.oauth = { data: null, error: { code: 'validation_failed', status: 400, message: 'Unsupported provider' } };
+        await expect(authApi.loginWithGoogle()).rejects.toMatchObject({ status: 400 });
+    });
+
+    describe('oauthProviders', () => {
+        afterEach(() => vi.unstubAllGlobals());
+
+        it('reads which providers the project has switched on from the public settings', async () => {
+            const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ external: { google: true, github: false } }) }));
+            vi.stubGlobal('fetch', fetchMock);
+            expect(await authApi.oauthProviders()).toEqual({ google: true });
+            expect(fetchMock).toHaveBeenCalledWith('https://p.supabase.co/auth/v1/settings', { headers: { apikey: 'public-key' } });
+        });
+
+        it('reports Google as off when the provider is disabled', async () => {
+            vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => ({ external: { google: false } }) }));
+            expect(await authApi.oauthProviders()).toEqual({ google: false });
+        });
+
+        it('hides the option when the settings cannot be read', async () => {
+            vi.stubGlobal('fetch', async () => ({ ok: false, json: async () => ({}) }));
+            expect(await authApi.oauthProviders()).toEqual({ google: false });
+            vi.stubGlobal('fetch', async () => {
+                throw new TypeError('Failed to fetch');
+            });
+            expect(await authApi.oauthProviders()).toEqual({ google: false });
+        });
     });
 });

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { authApi } from '../api/index.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useSubmit } from '../hooks/useAsync.js';
 import { Button, Field, inputClass } from '../components/ui.jsx';
@@ -7,12 +8,22 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /** Sign-in and registration on one screen. Server messages are shown as-is (ERR-AUTH-04/05). */
 export default function LoginPage() {
-    const { signIn, notice } = useAuth();
+    const { signIn, signInWithGoogle, notice } = useAuth();
     const [mode, setMode] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState({});
     const submit = useSubmit(() => signIn(mode, { email: email.trim(), password }));
+    const google = useSubmit(signInWithGoogle);
+    // The button is shown only when Google sign-in is switched on in the project (otherwise it would lead to an error page).
+    const [googleEnabled, setGoogleEnabled] = useState(false);
+    useEffect(() => {
+        let alive = true;
+        authApi.oauthProviders().then((providers) => alive && setGoogleEnabled(providers.google));
+        return () => {
+            alive = false;
+        };
+    }, []);
 
     const onSubmit = async (e) => {
         e.preventDefault();
@@ -83,6 +94,19 @@ export default function LoginPage() {
                 >
                     {mode === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
                 </button>
+
+                {googleEnabled && (
+                    <div className="mt-4 border-t border-slate-200 pt-4">
+                        {google.error && (
+                            <p role="alert" className="mb-3 text-sm text-red-700">
+                                {google.error}
+                            </p>
+                        )}
+                        <Button variant="secondary" className="w-full" disabled={google.pending} onClick={() => google.run()}>
+                            {google.pending ? 'Переход в Google…' : 'Войти через Google'}
+                        </Button>
+                    </div>
+                )}
             </form>
         </div>
     );

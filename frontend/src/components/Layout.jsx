@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { ROLE_LABELS, useAuth } from '../auth/AuthContext.jsx';
+import { AnalyticsSetting } from './ConsentBanner.jsx';
 
 const LINKS = [
     { to: '/tools', label: 'Инструменты' },
@@ -37,6 +38,9 @@ export default function Layout() {
                     <button type="button" onClick={signOut} className="underline hover:text-white">
                         Выйти
                     </button>
+                    <div className="mt-1 text-xs lg:mt-2">
+                        <AnalyticsSetting />
+                    </div>
                 </div>
             </aside>
             <main className="min-w-0 p-3 sm:p-5">

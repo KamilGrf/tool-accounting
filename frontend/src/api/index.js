@@ -2,7 +2,7 @@
 // (they used to call a REST API). Lists and business operations are database functions (RPC),
 // plain row writes go to the tables; row security is enforced by the database (supabase/migrations).
 import { ApiError, NetworkError, run, toAuthError } from './client.js';
-import { supabase } from './supabase.js';
+import { fetchWithTimeout, projectConfig, supabase } from './supabase.js';
 import { buildOverdueCsv } from '../utils/csv.js';
 import { toolRow } from '../utils/toolPayload.js';
 
@@ -45,6 +45,26 @@ export const authApi = {
         if (error) throw toAuthError(error);
         if (!data.session) return { needsConfirmation: true };
         return loadProfile(data.user);
+    },
+
+    /** Sends the browser to Google; it comes back to this site with a session (PKCE) or with an error in the URL. */
+    async loginWithGoogle() {
+        const { error } = await supabase.auth
+            .signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+            .catch((e) => ({ error: e }));
+        if (error) throw toAuthError(error);
+    },
+
+    /** Which OAuth providers are switched on in the project (a public endpoint); any failure means "none". */
+    async oauthProviders() {
+        try {
+            const res = await fetchWithTimeout(`${projectConfig.url}/auth/v1/settings`, { headers: { apikey: projectConfig.anonKey } });
+            if (!res.ok) return { google: false };
+            const settings = await res.json();
+            return { google: Boolean(settings?.external?.google) };
+        } catch {
+            return { google: false };
+        }
     },
 
     async logout() {

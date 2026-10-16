@@ -6,8 +6,15 @@ import App from './App.jsx';
 import { ApiError, AUTH_EXPIRED } from './api/client.js';
 import { api, resetApi } from './test/mockApi.js';
 
+const analytics = vi.hoisted(() => ({ trackEvent: vi.fn(), trackPageView: vi.fn(), initAnalytics: vi.fn() }));
+vi.mock('./analytics.js', () => ({ isAnalyticsConfigured: false, getConsent: () => null, setConsent: vi.fn(), ...analytics }));
+
 vi.mock('./api/index.js', async () => (await import('./test/mockApi.js')).api);
-beforeEach(resetApi);
+beforeEach(() => {
+    resetApi();
+    analytics.trackEvent.mockClear();
+    window.history.replaceState(null, '', '/');
+});
 
 const renderApp = (path = '/tools') =>
     render(
@@ -123,5 +130,72 @@ describe('authentication and roles', () => {
         renderApp();
         expect(screen.getByRole('alert')).toHaveTextContent('VITE_SUPABASE_URL');
         expect(api.authApi.me).not.toHaveBeenCalled();
+    });
+});
+
+describe('Google sign-in and analytics events', () => {
+    it('shows the Google button when the provider is switched on and starts the redirect on click', async () => {
+        renderApp();
+        await userEvent.click(await screen.findByRole('button', { name: 'Войти через Google' }));
+        expect(api.authApi.loginWithGoogle).toHaveBeenCalledOnce();
+    });
+
+    it('hides the Google button when the provider is switched off in the project', async () => {
+        api.authApi.oauthProviders.mockResolvedValue({ google: false });
+        renderApp();
+        await screen.findByRole('button', { name: 'Войти' });
+        expect(screen.queryByRole('button', { name: 'Войти через Google' })).not.toBeInTheDocument();
+    });
+
+    it('shows an error when the redirect to Google cannot be started', async () => {
+        api.authApi.loginWithGoogle.mockRejectedValue(
+            new ApiError(400, 'Не удалось выполнить операцию (код: validation_failed). Попробуйте позже'),
+        );
+        renderApp();
+        await userEvent.click(await screen.findByRole('button', { name: 'Войти через Google' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent('validation_failed');
+    });
+
+    it('explains a cancelled Google dialog and cleans the address bar', async () => {
+        window.history.replaceState(null, '', '/?error=access_denied&error_code=access_denied&error_description=Denied');
+        renderApp();
+        await screen.findByRole('button', { name: 'Войти' }); // the loading spinner also has the role "status"
+        expect(screen.getByRole('status')).toHaveTextContent('Вход через Google отменён');
+        expect(window.location.search).toBe('');
+    });
+
+    it('reports a login with the method "google" when the visitor comes back with a session', async () => {
+        window.history.replaceState(null, '', '/?code=one-time-code');
+        signedInAs('storekeeper');
+        renderApp();
+        await screen.findByTestId('whoami');
+        expect(analytics.trackEvent).toHaveBeenCalledWith('login', { method: 'google' });
+    });
+
+    it('does not report a Google login for an ordinary page load with a saved session', async () => {
+        signedInAs('storekeeper');
+        renderApp();
+        await screen.findByTestId('whoami');
+        expect(analytics.trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('reports e-mail sign-in without any personal data', async () => {
+        renderApp();
+        await userEvent.type(await screen.findByLabelText('Email'), 'ivan@test.ru');
+        await userEvent.type(screen.getByLabelText('Пароль'), 'long-enough-1');
+        await userEvent.click(screen.getByRole('button', { name: 'Войти' }));
+        await screen.findByTestId('whoami');
+        expect(analytics.trackEvent).toHaveBeenCalledWith('login', { method: 'email' });
+        expect(JSON.stringify(analytics.trackEvent.mock.calls)).not.toContain('ivan@test.ru');
+    });
+
+    it('does not report a login that failed', async () => {
+        api.authApi.login.mockRejectedValue(new ApiError(401, 'Неверный email или пароль'));
+        renderApp();
+        await userEvent.type(await screen.findByLabelText('Email'), 'ivan@test.ru');
+        await userEvent.type(screen.getByLabelText('Пароль'), 'wrong-pass');
+        await userEvent.click(screen.getByRole('button', { name: 'Войти' }));
+        await screen.findByText('Неверный email или пароль');
+        expect(analytics.trackEvent).not.toHaveBeenCalled();
     });
 });

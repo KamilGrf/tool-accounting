@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { issuesApi, statsApi } from '../api/index.js';
 import { useAsync } from '../hooks/useAsync.js';
+import { trackEvent } from '../analytics.js';
 import { downloadText } from '../utils/csv.js';
 import { daysOverdue, formatDate, formatMoney } from '../utils/format.js';
 import { Button, EmptyState, ErrorBanner, Spinner, TableCard } from '../components/ui.jsx';
@@ -26,6 +27,7 @@ export default function ReportPage() {
         setExportError(null);
         try {
             downloadText('overdue.csv', await issuesApi.overdueCsv());
+            trackEvent('report_exported');
         } catch (e) {
             setExportError(e);
         }

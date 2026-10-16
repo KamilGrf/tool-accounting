@@ -54,6 +54,9 @@ export function resetApi() {
         login: vi.fn(async () => ({ id: 'u1', login: 'ivan@test.ru', role: 'storekeeper' })),
         register: vi.fn(async () => ({ id: 'u1', login: 'ivan@test.ru', role: 'storekeeper' })),
         logout: vi.fn(async () => {}),
+        loginWithGoogle: vi.fn(async () => {}),
+        // Google sign-in is switched on by default in tests; a test can override it.
+        oauthProviders: vi.fn(async () => ({ google: true })),
         onSessionEnd: vi.fn(() => () => {}),
     });
     Object.assign(api.toolsApi, {

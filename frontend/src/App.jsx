@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { isConfigured } from './api/index.js';
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
+import ConsentBanner from './components/ConsentBanner.jsx';
 import Layout from './components/Layout.jsx';
+import PageTracker from './components/PageTracker.jsx';
 import { Spinner } from './components/ui.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ToolsPage from './pages/ToolsPage.jsx';
@@ -51,7 +53,9 @@ export default function App() {
     if (!isConfigured) return <MissingConfig />;
     return (
         <AuthProvider>
+            <PageTracker />
             <AppRoutes />
+            <ConsentBanner />
         </AuthProvider>
     );
 }
