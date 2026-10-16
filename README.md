@@ -9,7 +9,7 @@
    статика на Vercel                      роли, RLS, функции выдачи/возврата, отчёты
 ```
 
-Подробности: схема, права, функции, безопасность, проверка и ограничения — в [backend_documentation.md](backend_documentation.md). Предыдущая версия (Node.js API + PostgreSQL в Docker) сохранена в истории этого репозитория.
+Подробности: схема, права, функции, безопасность, проверка и ограничения — в [backend_documentation.md](backend_documentation.md); CI/CD, вход через Google и аналитика — в [integration_documentation.md](integration_documentation.md). Предыдущая версия (Node.js API + PostgreSQL в Docker) сохранена в истории этого репозитория.
 
 ## Что в репозитории
 
