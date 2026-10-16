@@ -1,0 +1,76 @@
+name: CI
+
+# Runs on every push (any branch) and on pull requests. Deployment is done by Vercel's Git integration
+# when `main` is updated; this pipeline is the quality gate that must be green before merging into `main`.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (lint, format, tests, audit, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Unit and component tests
+        run: npm test
+
+      - name: Audit production dependencies (fail on high severity)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholders: the real values are public but live in the hosting settings, not in the repository.
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-key
+
+  database:
+    name: Database (SQL tests, API layer against PostgREST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies (the API-layer test runs the real client code)
+        run: npm ci
+        working-directory: frontend
+
+      - name: SQL tests (migrations, RLS, functions) on PostgreSQL 16
+        run: bash supabase/tests/run.sh
+
+      - name: Frontend API layer against PostgREST
+        run: bash supabase/tests/http.sh
