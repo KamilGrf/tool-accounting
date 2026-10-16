@@ -44,9 +44,11 @@ describe('Content-Security-Policy', () => {
         expect(csp['default-src']).toEqual(["'self'"]);
     });
 
-    it('lets the app talk to Supabase and Google Analytics only', () => {
-        expect(csp['connect-src']).toContain('https://*.supabase.co');
-        expect(csp['connect-src']).toContain('wss://*.supabase.co');
+    it('lets the app talk to its own Supabase project (not to every project) and Google Analytics only', () => {
+        expect(csp['connect-src'].some((s) => /^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(s))).toBe(true);
+        expect(csp['connect-src']).not.toContain('https://*.supabase.co');
+        expect(csp['connect-src']).not.toContain('wss://*.supabase.co');
+        expect(csp['connect-src'].some((s) => /^wss:\/\/[a-z0-9]{20}\.supabase\.co$/.test(s))).toBe(true);
         for (const source of csp['connect-src']) expect(source).toMatch(/^('self'|https:\/\/\*?\.?[a-z0-9.-]+|wss:\/\/\*?\.?[a-z0-9.-]+)$/);
     });
 

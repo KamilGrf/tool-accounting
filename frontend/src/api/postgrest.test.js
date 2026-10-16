@@ -219,5 +219,17 @@ describe.skipIf(!URL || !SECRET)('frontend API layer against PostgREST', () => {
         await usersApi.setRole(NEWBIE, 'pending');
         as(NEWBIE);
         expect(await toolsApi.list()).toEqual([]);
+
+        as(KEEPER);
+        await expect(usersApi.auditLog()).rejects.toMatchObject({ status: 403 });
+        as(BOSS);
+        const trail = await usersApi.auditLog(5);
+        expect(trail[0]).toMatchObject({
+            action: 'role_changed',
+            actor: BOSS,
+            target: NEWBIE,
+            details: { from: 'storekeeper', to: 'pending' },
+        });
+        expect((await usersApi.list()).find((u) => u.id === NEWBIE).email_confirmed).toBe(false);
     });
 });

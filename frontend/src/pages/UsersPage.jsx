@@ -46,6 +46,9 @@ export default function UsersPage() {
             <p className="mb-3 text-sm text-slate-600">
                 Новые аккаунты не видят данные, пока вы не подтвердите их{pending > 0 && <strong> (ожидают: {pending})</strong>}.
             </p>
+            <p className="mb-3 text-sm text-slate-600">
+                Подтверждайте только тех, кого знаете: адрес почты при регистрации мог быть указан чужой.
+            </p>
             <ErrorBanner error={error} />
             <ErrorBanner error={users.error} onRetry={users.reload} />
             {users.loading && !users.data && <Spinner />}
@@ -64,7 +67,12 @@ export default function UsersPage() {
                         <tbody>
                             {users.data.map((u) => (
                                 <tr key={u.id} className={`border-t border-slate-200 ${u.role === 'pending' ? 'bg-amber-50' : ''}`}>
-                                    <td className="px-2.5 py-2">{u.email}</td>
+                                    <td className="px-2.5 py-2">
+                                        {u.email}
+                                        {u.email_confirmed === false && (
+                                            <span className="ml-2 text-xs text-amber-700">почта не подтверждена</span>
+                                        )}
+                                    </td>
                                     <td className="px-2.5 py-2">{ROLE_LABELS[u.role] || u.role}</td>
                                     <td className="hidden px-2.5 py-2 sm:table-cell">{formatDate(u.created_at?.slice(0, 10))}</td>
                                     <td className="px-2.5 py-2">

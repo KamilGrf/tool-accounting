@@ -319,6 +319,14 @@ describe('users (approval of accounts)', () => {
         expect(h.client.rpc).toHaveBeenLastCalledWith('set_user_role', { p_user_id: 'p1', p_role: 'storekeeper' });
     });
 
+    it('auditLog reads the audit trail with a limit', async () => {
+        h.state.rpc.list_audit_log = () => ok([{ id: 1, action: 'role_changed' }]);
+        expect(await usersApi.auditLog(20)).toEqual([{ id: 1, action: 'role_changed' }]);
+        expect(h.client.rpc).toHaveBeenLastCalledWith('list_audit_log', { p_limit: 20 });
+        h.state.rpc.list_audit_log = () => fail('P0403', 'Недостаточно прав');
+        await expect(usersApi.auditLog()).rejects.toMatchObject({ status: 403 });
+    });
+
     it('the database refusals reach the user as they are', async () => {
         h.state.rpc.set_user_role = () => fail('P0409', 'Нельзя изменить собственную роль');
         await expect(usersApi.setRole('me', 'manager')).rejects.toMatchObject({ status: 409, message: 'Нельзя изменить собственную роль' });

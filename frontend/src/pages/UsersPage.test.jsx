@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 
 const USERS = [
-    { id: 'p1', email: 'new@test.ru', role: 'pending', created_at: '2026-10-17T08:00:00+00:00' },
+    { id: 'p1', email: 'new@test.ru', role: 'pending', created_at: '2026-10-17T08:00:00+00:00', email_confirmed: false },
     { id: 'u1', email: 'boss@test.ru', role: 'manager', created_at: '2026-10-10T08:00:00+00:00' },
     { id: 's1', email: 'keeper@test.ru', role: 'storekeeper', created_at: '2026-10-11T08:00:00+00:00' },
 ];
@@ -29,6 +29,13 @@ describe('UsersPage', () => {
         expect(screen.getByText(/ожидают: 1/)).toBeInTheDocument();
         expect(within(rowOf('new@test.ru')).getByText('Ожидает подтверждения')).toBeInTheDocument();
         expect(within(rowOf('keeper@test.ru')).getByText('Кладовщик')).toBeInTheDocument();
+    });
+
+    it('marks accounts whose e-mail is not confirmed, and only those', async () => {
+        asBoss();
+        await screen.findByText('new@test.ru');
+        expect(within(rowOf('new@test.ru')).getByText('почта не подтверждена')).toBeInTheDocument();
+        expect(within(rowOf('keeper@test.ru')).queryByText('почта не подтверждена')).not.toBeInTheDocument();
     });
 
     it('offers no buttons for the own account: nobody can change his own role', async () => {

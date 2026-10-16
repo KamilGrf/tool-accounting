@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import handler, { CHECK_TIMEOUT_MS, summarize } from './health.js';
+import handler, { CACHE_TTL_MS, CHECK_TIMEOUT_MS, resetHealthCache, summarize } from './health.js';
 
 const ok = (body = {}) => ({ ok: true, status: 200, json: async () => body });
 const bad = (status) => ({ ok: false, status, json: async () => ({}) });
@@ -35,6 +35,7 @@ function stubFetch({ database = ok({ ok: true }), auth = ok(), google = ok() } =
 }
 
 beforeEach(() => {
+    resetHealthCache();
     vi.stubEnv('SUPABASE_URL', 'https://p.supabase.co');
     vi.stubEnv('SUPABASE_ANON_KEY', 'public-key');
     vi.stubEnv('VERCEL_GIT_COMMIT_SHA', 'abcdef1234567890');
@@ -179,5 +180,46 @@ describe('GET /api/health', () => {
         const line = JSON.parse(console.error.mock.calls[0][0]);
         expect(line).toMatchObject({ level: 'error', message: 'health', status: 'down', failed: ['database:http_500'] });
         expect(console.error.mock.calls[0][0]).not.toContain('public-key');
+    });
+});
+
+describe('caching of the answer', () => {
+    it('repeats the last answer within the window without calling the services again', async () => {
+        const mock = stubFetch();
+        const first = makeRes();
+        await handler({ method: 'GET' }, first);
+        const second = makeRes();
+        await handler({ method: 'GET' }, second);
+        expect(mock).toHaveBeenCalledTimes(3);
+        expect(second.body).toEqual(first.body);
+        expect(second.headers['Cache-Control']).toBe('no-store');
+    });
+
+    it('asks again after the window, and a failure is not remembered longer than that', async () => {
+        vi.useFakeTimers();
+        let databaseUp = false;
+        const mock = stubFetch({ database: () => (databaseUp ? ok({ ok: true }) : bad(500)) });
+        const down = makeRes();
+        await handler({ method: 'GET' }, down);
+        expect(down.statusCode).toBe(503);
+        const still = makeRes();
+        await handler({ method: 'GET' }, still);
+        expect(still.statusCode).toBe(503);
+        expect(mock).toHaveBeenCalledTimes(3);
+
+        databaseUp = true;
+        vi.advanceTimersByTime(CACHE_TTL_MS + 1);
+        const up = makeRes();
+        await handler({ method: 'GET' }, up);
+        expect(up.statusCode).toBe(200);
+        expect(mock).toHaveBeenCalledTimes(6);
+    });
+
+    it('does not cache a misconfiguration or a refused method', async () => {
+        const mock = stubFetch();
+        const post = makeRes();
+        await handler({ method: 'POST' }, post);
+        expect(post.statusCode).toBe(405);
+        expect(mock).not.toHaveBeenCalled();
     });
 });

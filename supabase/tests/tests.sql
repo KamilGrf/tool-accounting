@@ -41,7 +41,7 @@ end $$;
 \set boss    '''00000000-0000-0000-0000-0000000000b1'''
 
 \set newbie '''00000000-0000-0000-0000-0000000000c1'''
-insert into auth.users(id, email) values (:keeper::uuid, 'keeper@test'), (:keeper2::uuid, 'keeper2@test'), (:boss::uuid, 'boss@test'), (:newbie::uuid, 'newbie@test');
+insert into auth.users(id, email, email_confirmed_at) values (:keeper::uuid, 'keeper@test', now()), (:keeper2::uuid, 'keeper2@test', now()), (:boss::uuid, 'boss@test', now()), (:newbie::uuid, 'newbie@test', null);
 -- New accounts are "pending"; the fixtures approve the staff the tests need (the newbie stays pending).
 update public.profiles set role = 'manager' where id = :boss::uuid;
 update public.profiles set role = 'storekeeper' where id in (:keeper::uuid, :keeper2::uuid);
@@ -224,10 +224,36 @@ select t.err('a manager cannot change his own role', t.q(:boss::uuid, format($q$
 select t.err('an unknown user cannot get a role', t.q(:boss::uuid, $q$select public.set_user_role('00000000-0000-0000-0000-00000000ffff'::uuid, 'storekeeper')::text$q$), 'P0404');
 select t.eq('a manager approves the pending user', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'storekeeper')::text$q$, :newbie)), '');
 select t.eq('...who then reads the catalogue', t.q(:newbie::uuid, 'select (count(*) > 0)::text from public.v_tools'), 'true');
-select t.eq('...and the change is journaled with who did it', (select count(*)::text from public.client_logs where message = 'role_changed' and context->>'role' = 'storekeeper' and user_id = :boss::uuid), '1');
+select t.eq('...and the change is journaled with who did it', (select count(*)::text from public.audit_log where action = 'role_changed' and details->>'from' = 'pending' and details->>'to' = 'storekeeper' and actor = :boss::uuid and target = :newbie::uuid), '1');
 select t.eq('a manager can send the user back to waiting', t.q(:boss::uuid, format($q$select public.set_user_role(%L::uuid, 'pending')::text$q$, :newbie)), '');
 select t.eq('...who loses access at once', t.q(:newbie::uuid, 'select count(*) from public.v_tools'), '0');
 select t.eq('the e-mail of whoever issued a tool is never handed out', (select count(*)::text from public.v_issues where issued_by like '%@%'), '0');
+
+-- ------------------------------------------------------------------ audit hardening (migration 008)
+select t.err('a tool cannot be created as issued', t.q(:keeper::uuid, $q$insert into public.tools(inv_number, name, category_id, status) values ('H-1', 'Сразу выдан', 1, 'issued') returning 1$q$), '42501');
+select t.err('...nor as written off', t.q(:keeper::uuid, $q$insert into public.tools(inv_number, name, category_id, status) values ('H-2', 'Сразу списан', 1, 'written_off') returning 1$q$), '42501');
+select t.eq('...but in stock it is fine', t.q(:keeper::uuid, $q$with r as (insert into public.tools(inv_number, name, category_id, status) values ('H-3', 'Обычный', 1, 'in_stock') returning 1) select count(*) from r$q$), '1');
+select t.eq('a storekeeper cannot delete an employee (RLS)', t.q(:keeper::uuid, 'with r as (delete from public.employees where id = 2 returning 1) select count(*) from r'), '0');
+select t.eq('a storekeeper cannot delete a category (RLS)', t.q(:keeper::uuid, 'with r as (delete from public.categories where id = 2 returning 1) select count(*) from r'), '0');
+select t.eq('a manager can delete a category without tools', t.q(:boss::uuid, $q$with c as (insert into public.categories(name) values ('Временная') returning id), r as (delete from public.categories where id = (select id from c) returning 1) select count(*) from r$q$), '1');
+
+select t.eq('list_users tells whether the e-mail is confirmed', t.q(:boss::uuid, $q$select string_agg(email || '=' || email_confirmed, ',' order by email) from public.list_users() where email in ('boss@test', 'newbie@test')$q$), 'boss@test=true,newbie@test=false');
+select t.err('the audit table cannot be read directly', t.q(:boss::uuid, 'select count(*) from public.audit_log'), '42501');
+select t.err('...nor written', t.q(:boss::uuid, $q$insert into public.audit_log(action) values ('forged') returning 1$q$), '42501');
+select t.err('a storekeeper cannot read the audit log', t.q(:keeper::uuid, 'select count(*) from public.list_audit_log()'), 'P0403');
+select t.eq('a manager reads the audit log, newest first', t.q(:boss::uuid, 'select details->>$$to$$ from public.list_audit_log()'), 'pending');
+select t.eq('a role change is not left in the client journal any more', (select count(*)::text from public.client_logs where message = 'role_changed'), '0');
+select t.eq('the audit log is kept apart from the purgeable client journal', (select (count(*) > 0)::text from public.audit_log), 'true');
+
+insert into public.client_logs(level, message, user_id, created_at)
+select 'info', 'old', :boss::uuid, now() - interval '2 hours' from generate_series(1, 500);
+select t.err('more than 500 journal entries a day are refused', t.q(:boss::uuid, $q$select public.log_client_event('info', 'x')::text$q$), 'P0429', 'Дневной');
+select t.eq('...for that user only', t.q(:keeper::uuid, $q$select public.log_client_event('info', 'fine')::text$q$), '');
+
+select t.err('a return date more than a year ahead is refused', t.q(:keeper::uuid, format('select (public.issue_tool(%s, %s, public.today_local() + 400)).id', :t2, :e1)), 'P0400', 'через год');
+select t.err('...even in the year 9999', t.q(:keeper::uuid, format($q$select (public.issue_tool(%s, %s, '9999-12-31'::date)).id$q$, :t2, :e1)), 'P0400', 'через год');
+select t.err('extending beyond a year from the issue date is refused', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 400)).id', :i1)), 'P0400', 'через год');
+select t.eq('extending within a year is fine', t.q(:keeper::uuid, format('select (public.extend_issue(%s, public.today_local() + 300)).due_at = public.today_local() + 300', :i1)), 'true');
 
 -- ------------------------------------------------------------------ result
 \o
