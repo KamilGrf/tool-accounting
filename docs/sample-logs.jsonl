@@ -1,0 +1,18 @@
+{"source":"vercel","ts":"2026-10-17T10:00:03.114Z","level":"info","message":"health","status":"ok","failed":[],"ms":212}
+{"source":"browser","id":101,"created_at":"2026-10-17T10:03:02.000Z","level":"warn","message":"network_error","context":{"op":"rpc/list_tools"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"browser","id":102,"created_at":"2026-10-17T10:03:19.000Z","level":"warn","message":"network_error","context":{"op":"rpc/list_tools"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"browser","id":103,"created_at":"2026-10-17T10:03:41.000Z","level":"warn","message":"network_error","context":{"op":"rpc/list_tools"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"browser","id":104,"created_at":"2026-10-17T10:04:10.000Z","level":"warn","message":"network_error","context":{"op":"rpc/list_tools"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"browser","id":105,"created_at":"2026-10-17T10:04:33.000Z","level":"warn","message":"network_error","context":{"op":"rpc/list_tools"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"vercel","ts":"2026-10-17T10:06:58.402Z","level":"error","message":"health","status":"down","failed":["database:timeout"],"ms":5004}
+{"source":"browser","id":106,"created_at":"2026-10-17T10:07:12.000Z","level":"error","message":"api_error","context":{"op":"rpc/issue_tool","status":500},"route":"/tools","release":"dev","user_id":"u-12bc"}
+{"source":"browser","id":107,"created_at":"2026-10-17T10:07:31.000Z","level":"error","message":"api_error","context":{"op":"rpc/issue_tool","status":500},"route":"/tools","release":"dev","user_id":"u-9d01"}
+{"source":"vercel","ts":"2026-10-17T10:07:40.120Z","level":"error","message":"health","status":"down","failed":["database:timeout"],"ms":5003}
+{"source":"browser","id":108,"created_at":"2026-10-17T10:07:58.000Z","level":"error","message":"api_error","context":{"op":"rpc/issue_tool","status":500},"route":"/tools","release":"dev","user_id":"u-12bc"}
+{"source":"vercel","ts":"2026-10-17T10:08:41.775Z","level":"info","message":"health","status":"ok","failed":[],"ms":654}
+{"source":"browser","id":109,"created_at":"2026-10-17T10:12:20.000Z","level":"warn","message":"api_denied","context":{"op":"rpc/report_stats","status":403},"route":"/report","release":"dev","user_id":"u-12bc"}
+{"source":"browser","id":110,"created_at":"2026-10-17T10:12:21.000Z","level":"warn","message":"api_denied","context":{"op":"rpc/report_usage","status":403},"route":"/report","release":"dev","user_id":"u-12bc"}
+{"source":"vercel","ts":"2026-10-17T10:15:02.931Z","level":"info","message":"health","status":"ok","failed":[],"ms":198}
+{"source":"browser","id":111,"created_at":"2026-10-17T10:15:44.000Z","level":"error","message":"unhandled_rejection","context":{"name":"TypeError","message":"Cannot read properties of undefined (reading 'map')","stack":"TypeError: Cannot read properties of undefined (reading 'map')\n    at IssuesPage (assets/index-3f9a.js:1:48210)\n    at renderWithHooks (assets/index-3f9a.js:1:12044)"},"route":"/issues","release":"dev","user_id":"u-9d01"}
+{"source":"browser","id":112,"created_at":"2026-10-17T10:18:05.000Z","level":"error","message":"render_crash","context":{"name":"Error","message":"Cannot render the history of [email]","componentStack":"\n    at ToolDetail\n    at ToolsPage"},"route":"/tools","release":"dev","user_id":"u-7f3a"}
+{"source":"vercel","ts":"2026-10-17T10:30:02.540Z","level":"warn","message":"health","status":"degraded","failed":["google:http_503"],"ms":187}

@@ -26,7 +26,7 @@ npm run dev              # http://localhost:5173
 ```bash
 npm run lint           # ESLint
 npm run format:check   # Prettier (npm run format: исправить)
-npm test               # 70 тестов; интеграционные (8) пропускаются без PostgREST
+npm test               # 158 тестов; интеграционные (10) пропускаются без PostgREST
 npm run build          # продакшен-сборка в dist/
 ```
 
