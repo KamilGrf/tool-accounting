@@ -26,8 +26,8 @@ export default [
         },
     },
     {
-        // Config files and tests run in Node (tests also use jsdom globals through the browser set above).
-        files: ['*.config.js', 'src/test/**', 'src/**/*.test.{js,jsx}'],
+        // Config files, Vercel functions (api/) and tests run in Node (tests also use jsdom globals through the browser set above).
+        files: ['*.config.js', 'api/**', 'src/test/**', 'src/**/*.test.{js,jsx}'],
         languageOptions: { globals: { ...globals.browser, ...globals.node } },
     },
 ];
