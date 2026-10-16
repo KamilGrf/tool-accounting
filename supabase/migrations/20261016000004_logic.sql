@@ -1,4 +1,4 @@
--- 004: views, status guard, business functions and reports (ported from ДЗ6/backend/src/services.js).
+-- 004: views, status guard, business functions and reports (ported from the earlier Node.js services).
 -- Error contract (SQLSTATE -> HTTP-like status used by the frontend):
 --   P0400 invalid input, P0401 not signed in, P0403 no permission, P0404 not found, P0409 conflict.
 -- Messages are written for the user and are shown as-is.

@@ -1,4 +1,4 @@
--- 001: core schema (ported from the PostgreSQL version in ДЗ6/backend/migrations 001-003).
+-- 001: core schema (ported from the earlier Node.js + PostgreSQL version of the project).
 -- Differences: users live in Supabase Auth (auth.users) + public.profiles; "who did it" columns are uuid;
 -- text limits that the Node API checked in code are CHECK constraints here.
 
