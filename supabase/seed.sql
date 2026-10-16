@@ -1,4 +1,4 @@
--- Demo data (generated from the ДЗ6 seed.js). Run once on an empty database.
+-- Demo data (generated from the seed of the earlier version). Run once on an empty database.
 begin;
 
 -- The seed sets tool statuses directly; the guard trigger allows that only with this flag.
