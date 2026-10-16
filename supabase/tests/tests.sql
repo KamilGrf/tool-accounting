@@ -164,6 +164,43 @@ select t.eq('usage report: issues of a tool', t.q(:boss::uuid, format('select is
 select t.eq('usage report skips written-off tools', t.q(:boss::uuid, format('select count(*) from public.report_usage() where tool_id = %s', :t4)), '0');
 select t.err('usage report: unknown category', t.q(:boss::uuid, 'select count(*) from public.report_usage(99999)'), 'P0404');
 
+-- ------------------------------------------------------------------ health probe
+select t.eq('health is public: anon gets ok', t.q(null, $q$select (public.health()->>'ok')$q$), 'true');
+select t.eq('health works for signed-in users too', t.q(:keeper::uuid, $q$select (public.health()->>'ok')$q$), 'true');
+select t.eq('health returns the server time', t.q(null, $q$select (public.health() ? 'time')::text$q$), 'true');
+
+-- ------------------------------------------------------------------ client log: closed table, guarded function
+select t.err('anon cannot call log_client_event', t.q(null, $q$select public.log_client_event('error', 'x')::text$q$), '42501');
+select t.err('the log table cannot be read directly', t.q(:keeper::uuid, 'select count(*) from public.client_logs'), '42501');
+select t.err('the log table cannot be written directly', t.q(:keeper::uuid, $q$insert into public.client_logs(level, message) values ('info', 'x') returning 1$q$), '42501');
+select t.err('anon cannot read the log table either', t.q(null, 'select count(*) from public.client_logs'), '42501');
+
+select t.eq('a signed-in user can append an entry', t.q(:keeper::uuid, $q$select public.log_client_event('error', 'boom', '{"status": 500}'::jsonb, '/tools', 'abc1234')::text$q$), '');
+select t.eq('...it is stored with the pseudonymous user id', (select (user_id = :keeper::uuid)::text from public.client_logs where message = 'boom'), 'true');
+select t.eq('...and with route, release and context', (select (route = '/tools' and release = 'abc1234' and context->>'status' = '500')::text from public.client_logs where message = 'boom'), 'true');
+select t.err('an unknown level is rejected', t.q(:keeper::uuid, $q$select public.log_client_event('fatal', 'x')::text$q$), 'P0400', 'уровень');
+select t.err('an empty message is rejected', t.q(:keeper::uuid, $q$select public.log_client_event('info', '   ')::text$q$), 'P0400', 'Пустое');
+select t.err('a context that is not an object is rejected', t.q(:keeper::uuid, $q$select public.log_client_event('info', 'x', '[1,2]'::jsonb)::text$q$), 'P0400', 'Контекст');
+select t.err('a huge context is rejected', t.q(:keeper::uuid, format($q$select public.log_client_event('info', 'x', jsonb_build_object('a', %L))::text$q$, repeat('y', 5000))), 'P0400', 'Контекст');
+select t.eq('a long message is accepted', t.q(:keeper::uuid, format($q$select public.log_client_event('warn', %L)::text$q$, repeat('z', 800))), '');
+select t.eq('...but stored cut to 500 characters', (select max(char_length(message))::text from public.client_logs where level = 'warn'), '500');
+
+select t.eq('30 entries per minute are accepted', (select count(*) filter (where r like 'ERR:%')::text from (select t.q(:keeper2::uuid, $q$select public.log_client_event('info', 'spam')::text$q$) as r from generate_series(1, 30)) x), '0');
+select t.err('the 31st entry within a minute is refused', t.q(:keeper2::uuid, $q$select public.log_client_event('info', 'spam')::text$q$), 'P0429', 'Слишком много');
+select t.eq('the limit is per user: another user is not affected', t.q(:keeper::uuid, $q$select public.log_client_event('info', 'still fine')::text$q$), '');
+
+-- ------------------------------------------------------------------ client log: reading and retention (managers only)
+select t.err('a storekeeper cannot read the log', t.q(:keeper::uuid, 'select count(*) from public.list_client_logs()'), 'P0403');
+select t.eq('a manager reads the log', t.q(:boss::uuid, $q$select (count(*) > 0)::text from public.list_client_logs()$q$), 'true');
+select t.eq('the level filter works', t.q(:boss::uuid, $q$select count(*) from public.list_client_logs('error')$q$), '1');
+select t.eq('the newest entries come first', t.q(:boss::uuid, $q$select message from public.list_client_logs(null, 1)$q$), 'still fine');
+select t.eq('the limit is at least 1', t.q(:boss::uuid, $q$select count(*) from public.list_client_logs(null, 0)$q$), '1');
+select t.err('a storekeeper cannot purge the log', t.q(:keeper::uuid, 'select public.purge_client_logs(30)::text'), 'P0403');
+insert into public.client_logs(level, message, created_at) values ('info', 'ancient entry', now() - interval '40 days');
+select t.eq('purge removes only entries older than the limit', t.q(:boss::uuid, 'select public.purge_client_logs(30)::text'), '1');
+select t.eq('...recent entries stay', t.q(:boss::uuid, $q$select (count(*) > 0)::text from public.list_client_logs()$q$), 'true');
+
+
 -- ------------------------------------------------------------------ result
 \o
 select id, case when ok then 'PASS' else 'FAIL' end as result, name, case when ok then '' else detail end as detail from t.results order by id;
