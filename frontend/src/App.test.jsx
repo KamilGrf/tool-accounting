@@ -275,3 +275,58 @@ describe('central log', () => {
         expect(line).not.toContain('wrong-pass-123');
     });
 });
+
+describe('access approval (security audit)', () => {
+    it('a newly registered account sees the waiting screen instead of the data, with no menu', async () => {
+        signedInAs('pending');
+        renderApp('/tools');
+        expect(await screen.findByRole('heading', { name: 'Доступ ожидает подтверждения' })).toBeInTheDocument();
+        expect(screen.getByTestId('pending-login')).toHaveTextContent('ivan@test.ru');
+        expect(screen.queryByTestId('whoami')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Инструменты' })).not.toBeInTheDocument();
+        expect(api.toolsApi.list).not.toHaveBeenCalled(); // not even a request for data
+    });
+
+    it('a pending account cannot open any section by typing its address', async () => {
+        signedInAs('pending');
+        renderApp('/users');
+        expect(await screen.findByRole('heading', { name: 'Доступ ожидает подтверждения' })).toBeInTheDocument();
+        expect(api.usersApi.list).not.toHaveBeenCalled();
+    });
+
+    it('a pending account can sign out', async () => {
+        signedInAs('pending');
+        renderApp();
+        await userEvent.click(await screen.findByRole('button', { name: 'Выйти' }));
+        expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument();
+        expect(api.authApi.logout).toHaveBeenCalledOnce();
+    });
+
+    it('the privacy policy stays public for a pending account', async () => {
+        signedInAs('pending');
+        renderApp('/privacy');
+        expect(await screen.findByRole('heading', { name: 'Политика конфиденциальности' })).toBeInTheDocument();
+    });
+
+    it('a manager sees the Users section and opens it', async () => {
+        signedInAs('manager');
+        renderApp('/users');
+        expect(await screen.findByRole('heading', { name: 'Пользователи' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Пользователи' })).toBeInTheDocument();
+    });
+
+    it('a storekeeper has no Users link and gets "no access" at the address', async () => {
+        signedInAs('storekeeper');
+        renderApp('/users');
+        expect(await screen.findByTestId('whoami')).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Пользователи' })).not.toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('Недостаточно прав');
+        expect(api.usersApi.list).not.toHaveBeenCalled();
+    });
+
+    it('tells people who register that a manager has to approve the access', async () => {
+        renderApp();
+        await userEvent.click(await screen.findByRole('button', { name: /Зарегистрироваться/ }));
+        expect(screen.getByText(/доступ после подтверждения руководителем/)).toBeInTheDocument();
+    });
+});

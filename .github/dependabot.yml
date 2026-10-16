@@ -1,0 +1,23 @@
+# Weekly pull requests with dependency updates (and with security fixes as soon as they appear).
+# CI (lint, tests, audit, build) runs on every such pull request, so an update is merged only when it is green.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-tools:
+        dependency-type: development
+    ignore:
+      # eslint-plugin-react supports ESLint up to 9: stay on 9 until the plugin catches up.
+      - dependency-name: eslint
+        versions: ['>=10']
+      - dependency-name: '@eslint/js'
+        versions: ['>=10']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -169,3 +169,12 @@ export const logsApi = {
     /** Entries of the central log, newest first (managers only). */
     list: ({ level, limit } = {}) => run(supabase.rpc('list_client_logs', { p_level: level || null, p_limit: limit ?? 100 })),
 };
+
+export const usersApi = {
+    /** All accounts, those waiting for approval first (managers only). */
+    list: () => run(supabase.rpc('list_users')),
+    /** Approve an account or change its role (managers only; never one's own role). */
+    setRole: (id, role) => run(supabase.rpc('set_user_role', { p_user_id: id, p_role: role })),
+    /** Who changed whose role and when, newest first (managers only; the table cannot be read or forged directly). */
+    auditLog: (limit = 100) => run(supabase.rpc('list_audit_log', { p_limit: limit })),
+};

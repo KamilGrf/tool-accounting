@@ -6,6 +6,7 @@ const LINKS = [
     { to: '/tools', label: 'Инструменты' },
     { to: '/issues', label: 'Выдача и возврат' },
     { to: '/report', label: 'Отчёт', roles: ['manager'] },
+    { to: '/users', label: 'Пользователи', roles: ['manager'] },
 ];
 
 /** Corporate layout (concept 3): sidebar on desktop, horizontal ribbon below the lg breakpoint. */

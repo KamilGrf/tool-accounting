@@ -5,7 +5,8 @@ create schema auth;
 
 create table auth.users (
     id    uuid primary key default gen_random_uuid(),
-    email text
+    email text,
+    email_confirmed_at timestamptz
 );
 
 -- Same definition as in Supabase: PostgREST puts the verified token into request.jwt.claims (JSON);

@@ -5,6 +5,16 @@
 // The answer contains no secrets and no details beyond names, timings and short error codes.
 
 export const CHECK_TIMEOUT_MS = 5000;
+// The endpoint is public, so every call would otherwise cost three outgoing requests: a flood of calls could be
+// turned into a flood against Supabase and Google. Within this window a warm instance repeats the last answer.
+export const CACHE_TTL_MS = 10_000;
+
+let cached = null;
+
+/** For tests: forget the remembered answer. */
+export function resetHealthCache() {
+    cached = null;
+}
 
 const supabaseUrl = () => process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = () => process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -91,6 +101,10 @@ export default async function handler(req, res) {
         return res.status(503).json({ status: 'down', error: 'not_configured' });
     }
 
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+        return res.status(cached.status === 'down' ? 503 : 200).json(cached.body);
+    }
+
     const results = await Promise.all(checks.map((run) => run()));
     const status = summarize(results);
     const body = {
@@ -106,5 +120,6 @@ export default async function handler(req, res) {
         ms: Math.max(...results.map((r) => r.ms)),
     });
 
+    cached = { at: Date.now(), status, body };
     return res.status(status === 'down' ? 503 : 200).json(body);
 }

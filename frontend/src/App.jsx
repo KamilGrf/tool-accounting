@@ -6,10 +6,12 @@ import Layout from './components/Layout.jsx';
 import PageTracker from './components/PageTracker.jsx';
 import { Spinner } from './components/ui.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import PendingPage from './pages/PendingPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import ToolsPage from './pages/ToolsPage.jsx';
 import IssuesPage from './pages/IssuesPage.jsx';
 import ReportPage from './pages/ReportPage.jsx';
+import UsersPage from './pages/UsersPage.jsx';
 
 function MissingConfig() {
     return (
@@ -37,6 +39,7 @@ function AppRoutes() {
     if (pathname === '/privacy') return <PrivacyPage />; // public: Google requires a policy link, no sign-in needed
     if (checking) return <Spinner />;
     if (!user) return <LoginPage />; // ERR-AUTH-01: no session -> sign-in screen
+    if (user.role === 'pending') return <PendingPage />; // not approved yet: no data, no menu
 
     return (
         <Routes>
@@ -46,6 +49,7 @@ function AppRoutes() {
                 <Route path="issues" element={<IssuesPage />} />
                 {/* The server enforces this too; the guard only avoids showing a page that would fail. */}
                 <Route path="report" element={user.role === 'manager' ? <ReportPage /> : <Forbidden />} />
+                <Route path="users" element={user.role === 'manager' ? <UsersPage /> : <Forbidden />} />
                 <Route path="*" element={<p className="p-4">Страница не найдена</p>} />
             </Route>
         </Routes>
