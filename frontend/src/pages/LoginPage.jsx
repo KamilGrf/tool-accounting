@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { authApi } from '../api/index.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useSubmit } from '../hooks/useAsync.js';
@@ -108,6 +109,11 @@ export default function LoginPage() {
                     </div>
                 )}
             </form>
+            <p className="mt-4 text-center text-xs text-slate-500">
+                <Link to="/privacy" className="underline">
+                    Политика конфиденциальности
+                </Link>
+            </p>
         </div>
     );
 }

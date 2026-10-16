@@ -199,3 +199,31 @@ describe('Google sign-in and analytics events', () => {
         expect(analytics.trackEvent).not.toHaveBeenCalled();
     });
 });
+
+describe('privacy policy page', () => {
+    it('is public: opens without signing in and without asking for a login', async () => {
+        renderApp('/privacy');
+        expect(await screen.findByRole('heading', { name: 'Политика конфиденциальности' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Какие данные обрабатываются' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Войти' })).not.toBeInTheDocument();
+    });
+
+    it('opens for a signed-in user too and does not cut the session', async () => {
+        signedInAs('storekeeper');
+        renderApp('/privacy');
+        expect(await screen.findByRole('heading', { name: 'Политика конфиденциальности' })).toBeInTheDocument();
+        expect(screen.queryByTestId('whoami')).not.toBeInTheDocument();
+    });
+
+    it('is linked from the login page', async () => {
+        renderApp();
+        const link = await screen.findByRole('link', { name: 'Политика конфиденциальности' });
+        expect(link).toHaveAttribute('href', '/privacy');
+    });
+
+    it('says what is collected and who receives it', async () => {
+        renderApp('/privacy');
+        const text = (await screen.findByRole('main')).textContent;
+        for (const word of ['Supabase', 'Vercel', 'Google Analytics', 'localStorage']) expect(text).toContain(word);
+    });
+});

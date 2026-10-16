@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { isConfigured } from './api/index.js';
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
 import ConsentBanner from './components/ConsentBanner.jsx';
@@ -6,6 +6,7 @@ import Layout from './components/Layout.jsx';
 import PageTracker from './components/PageTracker.jsx';
 import { Spinner } from './components/ui.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import PrivacyPage from './pages/PrivacyPage.jsx';
 import ToolsPage from './pages/ToolsPage.jsx';
 import IssuesPage from './pages/IssuesPage.jsx';
 import ReportPage from './pages/ReportPage.jsx';
@@ -32,6 +33,8 @@ function Forbidden() {
 
 function AppRoutes() {
     const { user, checking } = useAuth();
+    const { pathname } = useLocation();
+    if (pathname === '/privacy') return <PrivacyPage />; // public: Google requires a policy link, no sign-in needed
     if (checking) return <Spinner />;
     if (!user) return <LoginPage />; // ERR-AUTH-01: no session -> sign-in screen
 
